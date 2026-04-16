@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importar Prospectos Sevilla — Ningenia</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #2c3e50; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.card { background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-width: 600px; width: 100%; overflow: hidden; }
+.card-header { background: linear-gradient(135deg, #1F4E79, #2E75B6); color: white; padding: 24px 28px; }
+.card-header h1 { font-size: 20px; margin-bottom: 4px; }
+.card-header p { font-size: 13px; opacity: 0.8; }
+.card-body { padding: 28px; }
+.prospect-list { border: 1px solid #e8ecf0; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+.prospect-item { padding: 12px 16px; border-bottom: 1px solid #e8ecf0; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.prospect-item:last-child { border-bottom: none; }
+.prospect-item.extinguida { background: #fef9e7; }
+.prospect-name { font-weight: 600; color: #1F4E79; }
+.prospect-info { font-size: 11px; color: #7f8c8d; margin-top: 2px; }
+.badge { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; color: white; }
+.badge-ok { background: #27ae60; }
+.badge-ext { background: #e67e22; }
+.btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-import { background: #2E75B6; color: white; margin-bottom: 10px; }
+.btn-import:hover { background: #1F4E79; }
+.btn-import:disabled { background: #95a5a6; cursor: not-allowed; }
+.btn-back { background: #ecf0f1; color: #7f8c8d; font-size: 13px; padding: 10px; }
+.btn-back:hover { background: #d5d8dc; }
+#status { margin-top: 16px; padding: 12px 16px; border-radius: 6px; font-size: 13px; display: none; }
+#status.ok { background: #eafaf1; border: 1px solid #a9dfbf; color: #1e8449; }
+#status.error { background: #fdedec; border: 1px solid #f5b7b1; color: #c0392b; }
+#status.info { background: #EBF4FA; border: 1px solid #AED6F1; color: #1F4E79; }
+.progress { height: 6px; background: #ecf0f1; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.progress-bar { height: 100%; background: #27ae60; border-radius: 3px; transition: width 0.3s; width: 0%; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <h1>⬡ Importar Prospectos — Sevilla</h1>
+    <p>10 empresas del listado SABI · Provincia de Sevilla · Industria alimentaria</p>
+  </div>
+  <div class="card-body">
+    <div class="prospect-list" id="prospect-list"></div>
+    <button class="btn btn-import" id="btn-import" onclick="importar()">▶ Importar todos al Pipeline</button>
+    <button class="btn btn-back" onclick="window.location.href='pipeline.html'">← Volver al Pipeline</button>
+    <div id="status"></div>
+  </div>
+</div>
+
+<script>
+const LS_CFG = 'ningenia_firebase_cfg';
+const LS_KEY = 'ningenia_pipeline_data';
+
+const PROSPECTOS = [
+  {
+    empresa: 'Romero Álvarez SA',
+    sector: 'Alimentación / Industria harinera',
+    localidad: 'Sevilla',
+    ticketEstimado: 22000,
+    notas: 'Gran empresa del sector alimentario. Ingresos: ~71M€. Identificada en SABI como empresa activa de alto potencial.',
+    activa: true
+  },
+  {
+    empresa: 'Haribericas XXI SL',
+    sector: 'Alimentación / Industria harinera',
+    localidad: 'Sevilla',
+    ticketEstimado: 18000,
+    notas: 'ATENCIÓN: Empresa extinguida según SABI. Verificar situación antes de contactar. Ingresos históricos: ~46M€.',
+    activa: false
+  },
+  {
+    empresa: 'Molinos Harineros del Sur SA',
+    sector: 'Alimentación / Molinería',
+    localidad: 'Sevilla',
+    ticketEstimado: 16000,
+    notas: 'ATENCIÓN: Empresa extinguida según SABI. Verificar situación antes de contactar. Ingresos históricos: ~35M€.',
+    activa: false
+  },
+  {
+    empresa: 'Donut Corporation Sevilla SA',
+    sector: 'Alimentación / Bollería industrial',
+    localidad: 'Sevilla',
+    ticketEstimado: 16000,
+    notas: 'ATENCIÓN: Empresa extinguida según SABI. Posible absorción por grupo. Ingresos históricos: ~33M€. Investigar grupo actual.',
+    activa: false
+  },
+  {
+    empresa: 'Fapanys SA',
+    sector: 'Alimentación / Panadería industrial',
+    localidad: 'Sevilla',
+    ticketEstimado: 14000,
+    notas: 'Empresa activa del sector panadero industrial. Ingresos: ~23M€. Buen perfil para automatización Ningenia.',
+    activa: true
+  },
+  {
+    empresa: 'Yogures Andaluces SA',
+    sector: 'Alimentación / Lácteos',
+    localidad: 'Sevilla',
+    ticketEstimado: 14000,
+    notas: 'ATENCIÓN: Empresa extinguida según SABI. Verificar situación antes de contactar. Ingresos históricos: ~22M€.',
+    activa: false
+  },
+  {
+    empresa: 'Andaluza de Cafés SA',
+    sector: 'Alimentación / Café y bebidas',
+    localidad: 'Sevilla',
+    ticketEstimado: 12000,
+    notas: 'Empresa activa del sector cafés. Ingresos: ~19M€. Posible interés en automatización de líneas de envasado.',
+    activa: true
+  },
+  {
+    empresa: 'Alfocan SA',
+    sector: 'Alimentación / Industria',
+    localidad: 'Sevilla',
+    ticketEstimado: 10000,
+    notas: 'Empresa activa sector alimentario. Ingresos: ~14M€. Investigar proceso productivo para propuesta personalizada.',
+    activa: true
+  },
+  {
+    empresa: 'Horno San Buenaventura SL',
+    sector: 'Alimentación / Panadería',
+    localidad: 'Sevilla',
+    ticketEstimado: 8000,
+    notas: 'ATENCIÓN: Empresa extinguida según SABI. Verificar situación antes de contactar. Ingresos históricos: ~8M€.',
+    activa: false
+  },
+  {
+    empresa: 'Industrias Alimentarias de Montilla SA',
+    sector: 'Alimentación / Industria',
+    localidad: 'Montilla (Sevilla)',
+    ticketEstimado: 8000,
+    notas: 'ATENCIÓN: Empresa extinguida según SABI. Verificar situación antes de contactar. Ingresos históricos: ~7M€.',
+    activa: false
+  }
+];
+
+// Render list
+document.getElementById('prospect-list').innerHTML = PROSPECTOS.map((p, i) =>
+  `<div class="prospect-item ${p.activa ? '' : 'extinguida'}">
+    <div>
+      <div class="prospect-name">${p.empresa}</div>
+      <div class="prospect-info">${p.sector} · ${p.localidad} · Est. €${p.ticketEstimado.toLocaleString('es-ES')}</div>
+    </div>
+    <span class="badge ${p.activa ? 'badge-ok' : 'badge-ext'}">${p.activa ? 'Activa' : 'Extinguida'}</span>
+  </div>`
+).join('');
+
+function genId() { return 'opp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type;
+  el.style.display = 'block';
+}
+
+async function importar() {
+  const btn = document.getElementById('btn-import');
+  btn.disabled = true;
+  btn.textContent = 'Importando...';
+  setStatus('Conectando...', 'info');
+
+  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
+
+  if (cfg && cfg.apiKey) {
+    // Firebase mode
+    try {
+      const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+      const { getFirestore, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
+      const app = getApps().find(a => a.name === 'importer') || initializeApp(cfg, 'importer');
+      const db = getFirestore(app);
+
+      let done = 0;
+      for (const p of PROSPECTOS) {
+        const opp = {
+          id: genId(),
+          empresa: p.empresa,
+          sector: p.sector,
+          solucion: 'Automatización línea producción',
+          ticketEstimado: p.ticketEstimado,
+          etapa: 'prospecto',
+          comercial: 'David',
+          fuente: 'Base de datos SABI',
+          notas: p.notas,
+          fechaEntrada: today(),
+          fechaContacto: '',
+          proximaAccion: 'Investigar empresa y preparar primer contacto',
+          fechaAccion: '',
+          contacto: '',
+          cargo: '',
+          telefono: '',
+          email: '',
+          historial: [],
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(doc(db, 'oportunidades', opp.id), opp);
+        done++;
+        setStatus(`Importando... ${done}/${PROSPECTOS.length}`, 'info');
+        btn.textContent = `Importando ${done}/${PROSPECTOS.length}...`;
+      }
+      setStatus(`✅ ${PROSPECTOS.length} prospectos importados correctamente a Firebase. Abre el pipeline para verlos.`, 'ok');
+      btn.textContent = '✅ Importación completada';
+    } catch (e) {
+      console.error(e);
+      setStatus('Error con Firebase: ' + e.message + '. Importando en modo local...', 'error');
+      importarLocal();
+    }
+  } else {
+    importarLocal();
+  }
+}
+
+function importarLocal() {
+  const existing = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  const nuevos = PROSPECTOS.map(p => ({
+    id: genId(),
+    empresa: p.empresa,
+    sector: p.sector,
+    solucion: 'Automatización línea producción',
+    ticketEstimado: p.ticketEstimado,
+    etapa: 'prospecto',
+    comercial: 'David',
+    fuente: 'Base de datos SABI',
+    notas: p.notas,
+    fechaEntrada: today(),
+    fechaContacto: '',
+    proximaAccion: 'Investigar empresa y preparar primer contacto',
+    fechaAccion: '',
+    contacto: '',
+    cargo: '',
+    telefono: '',
+    email: '',
+    historial: []
+  }));
+  localStorage.setItem(LS_KEY, JSON.stringify([...existing, ...nuevos]));
+  setStatus(`✅ ${PROSPECTOS.length} prospectos importados en modo local. Abre el pipeline para verlos.`, 'ok');
+  document.getElementById('btn-import').textContent = '✅ Importación completada';
+}
+</script>
+</body>
+</html>
