@@ -983,7 +983,7 @@ body {
           <input type="email" id="f-email" placeholder="correo@empresa.com">
         </div>
         <div class="form-group">
-          <label>Solución Ningenia</label>
+          <label id="f-solucion-label">Solución</label>
           <select id="f-solucion">
             <option value="">Seleccionar...</option>
             <option>Sorter automático</option>
@@ -1331,9 +1331,11 @@ function applyTheme() {
 
 function updateFormSelects() {
   const n = neg();
-  // Solution select
+  // Solution select + label
   const fSol = document.getElementById('f-solucion');
-  if (fSol) fSol.innerHTML = n.soluciones.map(s=>`<option>${s}</option>`).join('');
+  const fSolLabel = document.getElementById('f-solucion-label');
+  if (fSol) fSol.innerHTML = '<option value="">Seleccionar...</option>' + n.soluciones.map(s=>`<option>${s}</option>`).join('');
+  if (fSolLabel) fSolLabel.textContent = 'Solución ' + n.nombre;
   // Etapa select
   const fEtapa = document.getElementById('f-etapa');
   if (fEtapa) fEtapa.innerHTML = [
@@ -2123,7 +2125,7 @@ Analiza esta empresa y devuelve ÚNICAMENTE un objeto JSON válido con esta estr
         'anthropic-dangerous-allow-browser': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
