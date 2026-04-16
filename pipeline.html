@@ -1075,6 +1075,10 @@ body {
         </div>
       </div>
     </div>
+    <div id="migrate-banner" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin:0 20px 12px;font-size:13px;color:#856404;">
+      ⚠ Tienes <strong id="migrate-count">0</strong> oportunidades guardadas en local. ¿Subirlas a Firebase?
+      <button class="btn btn-primary" style="margin-left:10px;padding:5px 12px;font-size:12px;" onclick="syncLocalToFirebase()">📤 Subir a Firebase</button>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="useLocalMode()">Usar solo local</button>
       <button class="btn btn-primary" onclick="saveFirebaseConfig()">Conectar Firebase</button>
@@ -1657,7 +1661,52 @@ function openSetupModal() {
     const el = document.getElementById('cfg-' + k);
     if (el) el.value = cfg[k] || '';
   });
+  // Show migrate banner if there's local data
+  const localData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  const banner = document.getElementById('migrate-banner');
+  if (banner) {
+    if (localData.length > 0) {
+      document.getElementById('migrate-count').textContent = localData.length;
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
   openModal('setup-modal');
+}
+
+async function syncLocalToFirebase() {
+  const localData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  if (!localData.length) { toast('No hay datos locales para subir', 'info'); return; }
+
+  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
+  if (!cfg || !cfg.apiKey) { toast('Configura Firebase primero', 'error'); return; }
+
+  const btn = document.querySelector('#migrate-banner button');
+  if (btn) { btn.disabled = true; btn.textContent = 'Subiendo...'; }
+
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+    const { getFirestore, collection, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
+    const app = getApps().find(a => a.name === '[DEFAULT]') || initializeApp(cfg);
+    const db = getFirestore(app);
+    let done = 0;
+    for (const opp of localData) {
+      await setDoc(doc(db, 'oportunidades', opp.id), { ...opp, updatedAt: serverTimestamp() });
+      done++;
+      if (btn) btn.textContent = `Subiendo ${done}/${localData.length}...`;
+    }
+    toast(`✅ ${done} oportunidades subidas a Firebase`, 'success');
+    document.getElementById('migrate-banner').style.display = 'none';
+    closeModal('setup-modal');
+    if (unsubscribe) unsubscribe();
+    firebaseDb = null;
+    setTimeout(() => initFirebase(), 400);
+  } catch (e) {
+    console.error(e);
+    toast('Error al subir: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '📤 Subir a Firebase'; }
+  }
 }
 
 function saveFirebaseConfig() {
