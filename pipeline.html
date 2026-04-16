@@ -938,10 +938,29 @@ body {
       <button class="modal-close" onclick="closeModal('opp-modal')">✕</button>
     </div>
     <div class="modal-body">
+
+      <!-- AI ANALYSIS PANEL -->
+      <div id="ai-panel" style="display:none;margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid #c3e6cb;">
+        <div id="ai-panel-header" style="background:linear-gradient(135deg,#1a6b3c,#27ae60);color:white;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:700;font-size:13px;">🤖 Análisis IA — <span id="ai-empresa-label"></span></span>
+          <button onclick="document.getElementById('ai-panel').style.display='none'" style="background:none;border:none;color:white;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+        <div id="ai-panel-body" style="background:#f0faf5;padding:14px 16px;font-size:12px;line-height:1.6;"></div>
+        <div id="ai-panel-footer" style="background:#e8f5e9;padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #c3e6cb;">
+          <button class="btn btn-success" style="font-size:12px;padding:5px 12px;" onclick="applyAISuggestions()">✅ Aplicar sugerencias al formulario</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="document.getElementById('ai-panel').style.display='none'">Ignorar</button>
+        </div>
+      </div>
+
       <div class="form-grid">
-        <div class="form-group">
+        <div class="form-group" style="position:relative;">
           <label>Empresa *</label>
-          <input type="text" id="f-empresa" placeholder="Nombre de la empresa">
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="f-empresa" placeholder="Nombre de la empresa" style="flex:1;">
+            <button type="button" id="btn-ai-analyze" onclick="analyzeWithAI()"
+              style="background:linear-gradient(135deg,#1a6b3c,#27ae60);color:white;border:none;border-radius:4px;padding:0 12px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;"
+              title="Analizar empresa con IA">🤖 IA</button>
+          </div>
         </div>
         <div class="form-group">
           <label>Sector *</label>
@@ -1109,6 +1128,17 @@ body {
         <div class="form-group full">
           <label>App ID</label>
           <input type="text" id="cfg-appId" placeholder="1:123:web:abc">
+        </div>
+      </div>
+      <hr style="margin:16px 0 12px;border:none;border-top:1px solid var(--gray-light);">
+      <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px;">🤖 Inteligencia Artificial (opcional)</div>
+      <div class="setup-step" style="margin-bottom:10px;">
+        Consigue tu API Key en <strong>console.anthropic.com</strong> → API Keys. Se usa solo localmente desde tu navegador para analizar prospectos.
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Claude API Key</label>
+          <input type="password" id="cfg-claude-key" placeholder="sk-ant-api03-...">
         </div>
       </div>
     </div>
@@ -1606,17 +1636,21 @@ async function onDrop(e, stageId) {
 // DASHBOARD
 // ══════════════════════════════════════
 function renderDashboard() {
-  const active = allData.filter(o => !['cerrado','descartado'].includes(o.etapa));
-  const closed = allData.filter(o => o.etapa === 'cerrado');
+  const negData = allData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
+  const active = negData.filter(o => !['cerrado','descartado'].includes(o.etapa));
+  const closed = negData.filter(o => o.etapa === 'cerrado');
   const todayStr = today();
 
   const pipelineWeighted = active.reduce((s, o) => s + (parseFloat(o.ticketEstimado) || 0) * (STAGE_MAP[o.etapa]?.prob || 0), 0);
   const closedValue = closed.reduce((s, o) => s + (parseFloat(o.ticketReal) || parseFloat(o.ticketEstimado) || 0), 0);
-  const negoOpps = active.filter(o => o.etapa === 'negociacion');
-  const propOpps = active.filter(o => o.etapa === 'propuesta');
+  const stages = stagesActive();
+  const highStage = stages[stages.length - 1];
+  const midStage  = stages.length >= 2 ? stages[stages.length - 2] : stages[0];
+  const negoOpps = active.filter(o => o.etapa === highStage.id);
+  const propOpps = active.filter(o => o.etapa === midStage.id);
   const overdueOpps = active.filter(o => o.fechaAccion && o.fechaAccion < todayStr);
   const noContactOpps = active.filter(o => o.fechaContacto && daysBetween(o.fechaContacto, todayStr) > 14);
-  const total = allData.filter(o => o.etapa !== 'descartado').length;
+  const total = negData.filter(o => o.etapa !== 'descartado').length;
   const convRate = total > 0 ? Math.round((closed.length / total) * 100) : 0;
   const month = todayStr.substring(0, 7);
   const newMonth = active.filter(o => (o.fechaEntrada || '').startsWith(month)).length;
@@ -1626,8 +1660,8 @@ function renderDashboard() {
     { label: 'Objetivo Anual', value: `${pct}%`, sub: `€${fmt(closedValue)} de €${fmt(OBJETIVO_ANUAL)}`, color: pct >= 80 ? 'green' : pct >= 40 ? '' : '', progress: pct },
     { label: 'Pipeline Ponderado', value: '€' + fmt(pipelineWeighted), sub: 'Probabilidad ajustada por etapa', color: 'blue-dark' },
     { label: 'Proyectos Cerrados', value: closed.length, sub: '€' + fmt(closedValue) + ' facturado', color: 'green' },
-    { label: 'En Negociación', value: negoOpps.length, sub: '€' + fmt(negoOpps.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0),0)), color: 'orange' },
-    { label: 'Propuestas Activas', value: propOpps.length, sub: '€' + fmt(propOpps.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0),0)), color: '' },
+    { label: highStage.label, value: negoOpps.length, sub: '€' + fmt(negoOpps.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0),0)), color: 'orange' },
+    { label: midStage.label, value: propOpps.length, sub: '€' + fmt(propOpps.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0),0)), color: '' },
     { label: 'Acciones Vencidas', value: overdueOpps.length, sub: overdueOpps.length > 0 ? 'Requieren atención urgente' : 'Sin acciones pendientes', color: overdueOpps.length > 0 ? 'red' : 'green' },
     { label: 'Sin Contacto +14d', value: noContactOpps.length, sub: 'En riesgo de enfriarse', color: noContactOpps.length > 0 ? 'orange' : 'green' },
     { label: 'Tasa de Conversión', value: `${convRate}%`, sub: `${closed.length} cerrados de ${total} totales`, color: '' },
@@ -1667,8 +1701,9 @@ function renderDashboard() {
 // HISTORIAL TAB
 // ══════════════════════════════════════
 function renderHistorial() {
-  const closed    = allData.filter(o => o.etapa === 'cerrado').sort((a,b) => (b.fechaCierre||'').localeCompare(a.fechaCierre||''));
-  const discarded = allData.filter(o => o.etapa === 'descartado').sort((a,b) => (b.updatedAt?.seconds||0)-(a.updatedAt?.seconds||0));
+  const negData   = allData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
+  const closed    = negData.filter(o => o.etapa === 'cerrado').sort((a,b) => (b.fechaCierre||'').localeCompare(a.fechaCierre||''));
+  const discarded = negData.filter(o => o.etapa === 'descartado').sort((a,b) => (b.updatedAt?.seconds||0)-(a.updatedAt?.seconds||0));
 
   const closedValue = closed.reduce((s,o) => s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0), 0);
   document.getElementById('cerrados-total').textContent = '€' + fmt(closedValue);
@@ -1909,6 +1944,8 @@ function openSetupModal() {
     const el = document.getElementById('cfg-' + k);
     if (el) el.value = cfg[k] || '';
   });
+  const ckEl = document.getElementById('cfg-claude-key');
+  if (ckEl) ckEl.value = localStorage.getItem('ningenia_claude_key') || '';
   // Show migrate banner if there's local data
   const localData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
   const banner = document.getElementById('migrate-banner');
@@ -1964,6 +2001,8 @@ function saveFirebaseConfig() {
   });
   if (!cfg.apiKey || !cfg.projectId) { toast('API Key y Project ID son obligatorios', 'error'); return; }
   localStorage.setItem(LS_CFG, JSON.stringify(cfg));
+  const ck = document.getElementById('cfg-claude-key')?.value.trim();
+  if (ck) localStorage.setItem('ningenia_claude_key', ck);
   closeModal('setup-modal');
   if (unsubscribe) unsubscribe();
   firebaseDb = null;
@@ -1973,6 +2012,8 @@ function saveFirebaseConfig() {
 
 function useLocalMode() {
   localStorage.removeItem(LS_CFG);
+  const ck = document.getElementById('cfg-claude-key')?.value.trim();
+  if (ck) localStorage.setItem('ningenia_claude_key', ck);
   closeModal('setup-modal');
   setSyncStatus('local');
   toast('Modo local activado', 'info');
@@ -2024,6 +2065,149 @@ document.querySelector('.brand span:last-child').textContent = neg().icono + ' '
 // Update form selects
 updateFormSelects();
 initFirebase();
+
+// ══════════════════════════════════════
+// IA — ANÁLISIS DE EMPRESA
+// ══════════════════════════════════════
+async function analyzeWithAI() {
+  const empresa = document.getElementById('f-empresa').value.trim();
+  if (!empresa) { toast('Escribe el nombre de la empresa primero', 'error'); return; }
+
+  const claudeKey = localStorage.getItem('ningenia_claude_key');
+  if (!claudeKey) {
+    toast('Configura tu Claude API Key en ⚙ Configuración', 'error');
+    openSetupModal();
+    return;
+  }
+
+  const btn    = document.getElementById('btn-ai-analyze');
+  const panel  = document.getElementById('ai-panel');
+  const body   = document.getElementById('ai-panel-body');
+  const negocio = neg();
+  const sector = document.getElementById('f-sector').value.trim();
+  const notas  = document.getElementById('f-notas').value.trim();
+
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  panel.style.display = 'block';
+  document.getElementById('ai-empresa-label').textContent = empresa;
+  body.innerHTML = '<div style="text-align:center;padding:24px;color:#27ae60;font-size:13px;">🔍 Analizando empresa con IA...</div>';
+
+  const systemPrompt = negocio.id === 'ningenia'
+    ? `Eres un consultor experto en automatización industrial para Ningenia. Analizas empresas del sector alimentario e industrial para identificar oportunidades de automatización y robótica. Soluciones disponibles: ${negocio.soluciones.join(', ')}. Tickets habituales entre 20.000€ y 300.000€.`
+    : `Eres un consultor experto en productos ibéricos y charcutería para La Lonchería del Jamón. Analizas empresas (distribuidores, restaurantes, tiendas, maquileros) para identificar oportunidades de maquila o marca propia. Servicios: ${negocio.soluciones.join(', ')}. Tickets habituales entre 5.000€ y 80.000€.`;
+
+  const userPrompt = `Empresa: "${empresa}"
+${sector ? `Sector declarado: ${sector}` : ''}
+${notas  ? `Notas adicionales: ${notas}` : ''}
+
+Analiza esta empresa y devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta (sin texto fuera del JSON):
+{
+  "resumen": "descripción breve de la empresa y su actividad en 2-3 frases",
+  "oportunidades": ["oportunidad 1", "oportunidad 2", "oportunidad 3"],
+  "solucion_recomendada": "una de las soluciones disponibles que mejor encaje",
+  "ticket_estimado": 50000,
+  "ticket_rango": "40.000€ – 70.000€",
+  "proxima_accion": "acción comercial concreta y específica recomendada como primer paso",
+  "probabilidad_fit": 7,
+  "justificacion_ticket": "razón breve del ticket estimado"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': claudeKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-allow-browser': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Error HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Respuesta inesperada de la IA');
+    const parsed = JSON.parse(jsonMatch[0]);
+    window.aiSuggestions = parsed;
+
+    const fitColor = (parsed.probabilidad_fit||0) >= 7 ? '#27ae60' : (parsed.probabilidad_fit||0) >= 4 ? '#e67e22' : '#e74c3c';
+    const fitBg    = (parsed.probabilidad_fit||0) >= 7 ? '#eafaf1' : (parsed.probabilidad_fit||0) >= 4 ? '#fef5e7' : '#fdedec';
+
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="background:white;border-radius:6px;padding:10px 12px;border:1px solid #c3e6cb;">
+          <div style="font-size:10px;font-weight:700;color:#7f8c8d;text-transform:uppercase;margin-bottom:4px;">Ticket Estimado</div>
+          <div style="font-size:22px;font-weight:800;color:#1a6b3c;">€${parseInt(parsed.ticket_estimado||0).toLocaleString('es-ES')}</div>
+          <div style="font-size:11px;color:#7f8c8d;">${esc(parsed.ticket_rango||'')}</div>
+        </div>
+        <div style="background:${fitBg};border-radius:6px;padding:10px 12px;border:1px solid #c3e6cb;">
+          <div style="font-size:10px;font-weight:700;color:#7f8c8d;text-transform:uppercase;margin-bottom:4px;">Fit Comercial</div>
+          <div style="font-size:22px;font-weight:800;color:${fitColor};">${parsed.probabilidad_fit||'—'}/10</div>
+          <div style="font-size:11px;color:#7f8c8d;">Potencial de cierre</div>
+        </div>
+      </div>
+      <div style="margin-bottom:8px;font-size:12px;"><strong>📋 Empresa:</strong> ${esc(parsed.resumen||'')}</div>
+      <div style="margin-bottom:8px;font-size:12px;"><strong>💡 Solución:</strong> ${esc(parsed.solucion_recomendada||'')}</div>
+      <div style="margin-bottom:8px;font-size:12px;"><strong>🎯 Oportunidades detectadas:</strong>
+        <ul style="margin:4px 0 0 16px;line-height:1.8;">${(parsed.oportunidades||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
+      </div>
+      <div style="margin-bottom:6px;font-size:12px;"><strong>⏭ Próxima acción:</strong> ${esc(parsed.proxima_accion||'')}</div>
+      <div style="font-size:11px;color:#7f8c8d;font-style:italic;">${esc(parsed.justificacion_ticket||'')}</div>
+    `;
+  } catch(err) {
+    body.innerHTML = `<div style="color:#e74c3c;font-size:12px;padding:8px 0;">❌ Error: ${esc(err.message)}<br><small style="color:#95a5a6;">Verifica que la API Key sea correcta en ⚙ Configuración</small></div>`;
+    toast('Error IA: ' + err.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🤖 IA';
+}
+
+function applyAISuggestions() {
+  const s = window.aiSuggestions;
+  if (!s) return;
+
+  if (s.ticket_estimado) {
+    document.getElementById('f-ticket').value = parseInt(s.ticket_estimado) || '';
+  }
+  if (s.solucion_recomendada) {
+    const sel = document.getElementById('f-solucion');
+    const target = s.solucion_recomendada.toLowerCase();
+    let best = '';
+    for (const opt of sel.options) {
+      if (opt.value && target.includes(opt.value.toLowerCase().split(' ')[0].toLowerCase())) {
+        best = opt.value; break;
+      }
+    }
+    if (!best) {
+      // Try reverse: option text includes first word of suggestion
+      for (const opt of sel.options) {
+        if (opt.value && opt.value.toLowerCase().split(' ').some(w => w.length > 4 && target.includes(w))) {
+          best = opt.value; break;
+        }
+      }
+    }
+    if (best) sel.value = best;
+  }
+  if (s.proxima_accion) {
+    document.getElementById('f-proxima-accion').value = s.proxima_accion;
+  }
+
+  document.getElementById('ai-panel').style.display = 'none';
+  toast('✅ Sugerencias de IA aplicadas', 'success');
+}
 </script>
 </body>
 </html>

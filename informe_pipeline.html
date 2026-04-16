@@ -315,6 +315,13 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: v
 
 <div id="controls">
   <div class="ctrl-group">
+    <label>Negocio</label>
+    <select id="ctrl-negocio" onchange="onNegocioChangeRpt(this.value)" style="font-weight:700;">
+      <option value="ningenia">⬡ Ningenia</option>
+      <option value="loncheria">🥩 La Lonchería del Jamón</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
     <label>Desde</label>
     <input type="date" id="ctrl-from">
   </div>
@@ -363,21 +370,47 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: v
 
 <script>
 // ══════════════════════════════════════
-// CONSTANTS
+// CONSTANTS / MULTI-NEGOCIO
 // ══════════════════════════════════════
-const OBJETIVO_ANUAL = 350000;
-const STAGES_ACTIVE = [
-  { id: 'prospecto',   label: 'Prospecto',        prob: 0.05, color: '#95a5a6' },
-  { id: 'contacto',    label: 'Contacto',          prob: 0.10, color: '#3498db' },
-  { id: 'cualificado', label: 'Cualificado',       prob: 0.25, color: '#2980b9' },
-  { id: 'visita',      label: 'Visita / Demo',     prob: 0.40, color: '#e67e22' },
-  { id: 'propuesta',   label: 'Propuesta Enviada', prob: 0.65, color: '#c0392b' },
-  { id: 'negociacion', label: 'Negociación',       prob: 0.85, color: '#27ae60' },
-];
-const STAGE_MAP = {};
-STAGES_ACTIVE.forEach(s => STAGE_MAP[s.id] = s);
-STAGE_MAP['cerrado']    = { id: 'cerrado',    label: 'Cerrado',    prob: 1,    color: '#27ae60' };
-STAGE_MAP['descartado'] = { id: 'descartado', label: 'Descartado', prob: 0,    color: '#95a5a6' };
+const NEGOCIOS_RPT = {
+  ningenia: {
+    id: 'ningenia', nombre: 'Ningenia', icono: '⬡',
+    colorDark: '#1F4E79', colorMid: '#2E75B6',
+    objetivo: 350000,
+    stages: [
+      { id:'prospecto',   label:'Prospecto',        prob:0.05, color:'#95a5a6' },
+      { id:'contacto',    label:'Contacto',          prob:0.10, color:'#3498db' },
+      { id:'cualificado', label:'Cualificado',       prob:0.25, color:'#2980b9' },
+      { id:'visita',      label:'Visita / Demo',     prob:0.40, color:'#e67e22' },
+      { id:'propuesta',   label:'Propuesta Enviada', prob:0.65, color:'#c0392b' },
+      { id:'negociacion', label:'Negociación',       prob:0.85, color:'#27ae60' },
+    ],
+  },
+  loncheria: {
+    id: 'loncheria', nombre: 'La Lonchería del Jamón', icono: '🥩',
+    colorDark: '#7D2436', colorMid: '#B03A2E',
+    objetivo: 580000,
+    stages: [
+      { id:'prospecto',   label:'Prospecto',           prob:0.05, color:'#95a5a6' },
+      { id:'degustacion', label:'Degustación / Visita', prob:0.30, color:'#e67e22' },
+      { id:'propuesta',   label:'Propuesta',            prob:0.60, color:'#c0392b' },
+      { id:'pedido',      label:'Pedido',               prob:0.85, color:'#27ae60' },
+    ],
+  },
+};
+
+const LS_NEG_RPT = 'ningenia_current_negocio';
+let selectedNegocioRpt = localStorage.getItem(LS_NEG_RPT) || 'ningenia';
+
+function negRpt() { return NEGOCIOS_RPT[selectedNegocioRpt] || NEGOCIOS_RPT.ningenia; }
+
+function buildStageMapRpt(stages) {
+  const m = {};
+  stages.forEach(s => m[s.id] = s);
+  m['cerrado']    = { id:'cerrado',    label:'Cerrado',    prob:1, color:'#27ae60' };
+  m['descartado'] = { id:'descartado', label:'Descartado', prob:0, color:'#95a5a6' };
+  return m;
+}
 
 const LS_KEY = 'ningenia_pipeline_data';
 const LS_CFG = 'ningenia_firebase_cfg';
@@ -387,6 +420,18 @@ const LS_CFG = 'ningenia_firebase_cfg';
 // ══════════════════════════════════════
 let allData = [];
 let firebaseReady = false;
+
+function onNegocioChangeRpt(neg) {
+  selectedNegocioRpt = neg;
+  localStorage.setItem(LS_NEG_RPT, neg);
+  // Update header color
+  const n = negRpt();
+  document.getElementById('app-header').style.background = `linear-gradient(135deg, ${n.colorDark}, ${n.colorMid})`;
+  document.querySelector('#app-header .brand span:first-child').textContent = n.icono;
+  document.querySelector('#app-header .brand span:last-child').textContent = n.nombre + ' — Generador de Informes';
+  // Clear existing report
+  document.getElementById('report-container').innerHTML = `<div style="padding:60px 48px;text-align:center;color:#95a5a6;"><div style="font-size:48px;margin-bottom:16px;">${n.icono}</div><p style="font-size:16px;font-weight:600;">Negocio cambiado a <strong>${n.nombre}</strong></p><p style="font-size:13px;margin-top:8px;">Configure el período y pulse "Generar Informe"</p></div>`;
+}
 
 async function loadData() {
   const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
@@ -442,14 +487,27 @@ function esc(s) {
 // GENERATE REPORT
 // ══════════════════════════════════════
 function generateReport() {
-  const fromDate = document.getElementById('ctrl-from').value;
-  const toDate   = document.getElementById('ctrl-to').value;
+  const fromDate  = document.getElementById('ctrl-from').value;
+  const toDate    = document.getElementById('ctrl-to').value;
   const comercial = document.getElementById('ctrl-comercial').value;
 
   if (!fromDate || !toDate) { toast('Selecciona un período', 'error'); return; }
 
-  // Filter by comercial
-  let data = comercial ? allData.filter(o => o.comercial === comercial) : allData;
+  const negocio      = negRpt();
+  const STAGES_ACTIVE = negocio.stages;
+  const STAGE_MAP     = buildStageMapRpt(STAGES_ACTIVE);
+  const OBJETIVO_ANUAL = negocio.objetivo;
+
+  // Define histText as a closure over local STAGE_MAP
+  const histText = (h) => {
+    if (h.tipo === 'cambio_etapa') return `${h.etapaAnterior ? (STAGE_MAP[h.etapaAnterior]?.label||h.etapaAnterior)+' → ' : ''}${STAGE_MAP[h.etapaNueva]?.label||h.etapaNueva||''}${h.nota?' · '+h.nota:''}`;
+    if (h.tipo === 'nota') return '📝 ' + (h.nota||'');
+    return h.nota || '';
+  };
+
+  // Filter by negocio first, then by comercial
+  let data = allData.filter(o => (o.negocio || 'ningenia') === negocio.id);
+  if (comercial) data = data.filter(o => o.comercial === comercial);
 
   // Active opportunities (in pipeline, not closed/discarded)
   const active = data.filter(o => !['cerrado','descartado'].includes(o.etapa));
@@ -498,12 +556,12 @@ function generateReport() {
 
   const html = `<div class="rpt">
 <!-- COVER -->
-<div class="rpt-cover">
-  <div class="rpt-cover-tag">Informe Comercial · Ningenia</div>
+<div class="rpt-cover" style="background:linear-gradient(160deg, ${negocio.colorDark} 0%, ${negocio.colorMid} 60%, ${negocio.colorMid}cc 100%);">
+  <div class="rpt-cover-tag">Informe Comercial · ${esc(negocio.nombre)}</div>
   <div class="rpt-cover-title">Informe de Seguimiento<br>Pipeline de Ventas</div>
   <div class="rpt-cover-subtitle">${periodoLabel}</div>
   <div class="rpt-cover-meta">
-    <span>Preparado para<strong>David Suárez &amp; Roberto García</strong></span>
+    <span>Negocio<strong>${esc(negocio.nombre)}</strong></span>
     <span>Generado<strong>${genDate}</strong></span>
     ${comercial ? `<span>Comercial<strong>${esc(comercial)}</strong></span>` : ''}
     <span>Objetivo anual<strong>€${fmtNum(OBJETIVO_ANUAL)}</strong></span>
@@ -720,8 +778,8 @@ function generateReport() {
 </div><!-- end rpt-body -->
 
 <!-- FOOTER -->
-<div class="rpt-footer">
-  <span>⬡ <strong>Ningenia</strong> — Informe Pipeline Comercial</span>
+<div class="rpt-footer" style="background:${negocio.colorDark};">
+  <span>${negocio.icono} <strong>${esc(negocio.nombre)}</strong> — Informe Pipeline Comercial</span>
   <span>Período: ${periodoLabel}</span>
   <span>Generado: ${genDate}</span>
 </div>
@@ -735,8 +793,10 @@ function generateReport() {
 // ══════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════
-function histText(h) {
-  if (h.tipo === 'cambio_etapa') return `${h.etapaAnterior ? (STAGE_MAP[h.etapaAnterior]?.label||h.etapaAnterior)+' → ' : ''}${STAGE_MAP[h.etapaNueva]?.label||h.etapaNueva||''}${h.nota?' · '+h.nota:''}`;
+// histText is defined as a closure inside generateReport() to close over the local STAGE_MAP.
+// This outer stub is kept for reference but is not used directly.
+function histText_unused(h) {
+  if (h.tipo === 'cambio_etapa') return `${h.etapaAnterior ? h.etapaAnterior+' → ' : ''}${h.etapaNueva||''}${h.nota?' · '+h.nota:''}`;
   if (h.tipo === 'nota') return '📝 ' + (h.nota||'');
   return h.nota || '';
 }
@@ -768,6 +828,12 @@ function toast(msg, type='info') {
 // ══════════════════════════════════════
 setPeriodo();
 loadData();
+// Apply saved negocio selection
+(function() {
+  const sel = document.getElementById('ctrl-negocio');
+  if (sel) sel.value = selectedNegocioRpt;
+  onNegocioChangeRpt(selectedNegocioRpt);
+})();
 </script>
 </body>
 </html>
