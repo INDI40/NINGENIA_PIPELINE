@@ -242,8 +242,9 @@ body {
 
 /* ── BULK SELECT ── */
 .card.bulk-selected { outline: 2px solid #e74c3c; background: #fff5f5; transform: none !important; }
-.card.bulk-mode { cursor: pointer !important; }
-.bulk-check { display: none; position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 3px; border: 2px solid #e74c3c; background: white; }
+.card.bulk-mode { cursor: default !important; }
+.bulk-overlay { position: absolute; inset: 0; z-index: 5; cursor: pointer; border-radius: inherit; }
+.bulk-check { display: none; position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 3px; border: 2px solid #e74c3c; background: white; z-index: 6; pointer-events: none; }
 .card.bulk-mode .bulk-check { display: flex; align-items: center; justify-content: center; }
 .card.bulk-selected .bulk-check { background: #e74c3c; color: white; font-size: 11px; }
 
@@ -1546,10 +1547,10 @@ function renderCard(opp) {
   const initials = (opp.comercial || '?').substring(0, 2).toUpperCase();
   return `<div class="card ${bulkMode?'bulk-mode':''} ${bulkSelected.has(opp.id)?'bulk-selected':''}" id="card-${opp.id}"
     draggable="${!bulkMode}"
-    ondragstart="${bulkMode?'':` onDragStart(event,'${opp.id}')`}"
+    ondragstart="${bulkMode?'void(0)':` onDragStart(event,'${opp.id}')`}"
     ondragend="${bulkMode?'':'onDragEnd(event)'}"
-    onclick="${bulkMode?`toggleBulkSelect('${opp.id}')`:''}"
     style="border-left-color:${STAGE_MAP[opp.etapa]?.color || '#ccc'}">
+    ${bulkMode ? `<div class="bulk-overlay" onclick="event.preventDefault();event.stopPropagation();toggleBulkSelect('${opp.id}')"></div>` : ''}
     <div class="bulk-check">${bulkSelected.has(opp.id)?'✓':''}</div>
     ${(overdue || noContact) ? '<div class="card-alert" title="Requiere atención"></div>' : ''}
     <div class="card-empresa">${esc(opp.empresa || 'Sin nombre')}</div>
