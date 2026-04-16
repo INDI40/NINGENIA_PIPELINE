@@ -210,11 +210,22 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
 <body>
 
 <div id="header">
-  <div class="brand"><span>⬡</span><span>Agenda Comercial — Ningenia</span></div>
+  <div class="brand"><span id="brand-icon">⬡</span><span id="brand-name">Agenda Comercial — Ningenia</span></div>
   <div class="hdr-btns">
     <button class="btn-hdr" onclick="location.href='pipeline.html'">← Pipeline</button>
     <button class="btn-hdr" onclick="generateWeeklyReport()">📋 Informe Semanal</button>
   </div>
+</div>
+<div id="negocio-bar" style="background:var(--blue-dark);padding:6px 20px;display:flex;align-items:center;gap:8px;overflow-x:auto;">
+  <span style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;letter-spacing:1px;white-space:nowrap;">EMPRESA:</span>
+  <button class="neg-btn active" data-neg="ningenia" onclick="switchNegocio('ningenia')"
+    style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);color:white;padding:4px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">
+    ⬡ Ningenia
+  </button>
+  <button class="neg-btn" data-neg="loncheria" onclick="switchNegocio('loncheria')"
+    style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.65);padding:4px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">
+    🥩 La Lonchería del Jamón
+  </button>
 </div>
 
 <div id="tabs">
@@ -343,7 +354,37 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
 // STRATEGY TASKS  (base de la estrategia)
 // Tipos: tarea | evento | recordatorio | informe
 // ══════════════════════════════════════════
-const TASKS = {
+// ══════════════════════════════════════
+// MULTI-NEGOCIO
+// ══════════════════════════════════════
+const NEGOCIOS_AG = {
+  ningenia:  { nombre:'Ningenia',              icono:'⬡', colorDark:'#1F4E79', colorMid:'#2E75B6', objetivo:350000  },
+  loncheria: { nombre:'La Lonchería del Jamón', icono:'🥩', colorDark:'#7D2436', colorMid:'#B03A2E', objetivo:580000 },
+};
+const LS_NEG_AG = 'ningenia_current_negocio';
+let currentNegocio = localStorage.getItem(LS_NEG_AG) || 'ningenia';
+
+function switchNegocio(id) {
+  currentNegocio = id;
+  localStorage.setItem(LS_NEG_AG, id);
+  const n = NEGOCIOS_AG[id];
+  document.getElementById('brand-icon').textContent = n.icono;
+  document.getElementById('brand-name').textContent = 'Agenda Comercial — ' + n.nombre;
+  document.getElementById('header').style.background = `linear-gradient(135deg,${n.colorDark},${n.colorMid})`;
+  document.getElementById('negocio-bar').style.background = n.colorDark;
+  document.querySelectorAll('.neg-btn').forEach(b => {
+    const active = b.dataset.neg === id;
+    b.style.background  = active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+    b.style.color        = active ? 'white' : 'rgba(255,255,255,0.65)';
+    b.style.borderColor  = active ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)';
+  });
+  renderToday(); renderWeek(); renderCalendar(); renderReports(); checkFriday();
+}
+
+// ══════════════════════════════════════
+// TASKS — NINGENIA
+// ══════════════════════════════════════
+const TASKS_NINGENIA = {
   1: [ // LUNES
     {time:'08:50', type:'tarea',        text:'Revisar pipeline: actualizar etapas y priorizar acciones del día'},
     {time:'09:15', type:'tarea',        text:'Bloque prospección fría — 6 llamadas a nuevos prospectos (lista SABI / Alcalá / Dos Hermanas)'},
@@ -398,11 +439,72 @@ const TASKS = {
   ],
 };
 
+// ══════════════════════════════════════
+// TASKS — LA LONCHERÍA DEL JAMÓN
+// ══════════════════════════════════════
+const TASKS_LONCHERIA = {
+  1: [ // LUNES
+    {time:'08:50', type:'tarea',        text:'Revisar pipeline Lonchería: actualizar pedidos, degustaciones y propuestas pendientes'},
+    {time:'09:15', type:'tarea',        text:'Prospección fría — 6 llamadas a distribuidores y tiendas gourmet (nueva lista)'},
+    {time:'10:00', type:'recordatorio', text:'Follow-up degustaciones realizadas la semana pasada — pedir feedback y avanzar a propuesta'},
+    {time:'10:45', type:'tarea',        text:'Contactar 3 posibles maquileros: presentar servicio de loncheado y envasado al vacío'},
+    {time:'11:30', type:'tarea',        text:'Prospección fría — 6 llamadas a restaurantes y cadenas de hostelería'},
+    {time:'12:00', type:'tarea',        text:'Preparar propuestas de maquila o marca propia pendientes de envío'},
+    {time:'16:00', type:'tarea',        text:'Prospección tarde — 6 llamadas a marcas blancas y grandes superficies'},
+    {time:'17:00', type:'recordatorio', text:'Actualizar pipeline Lonchería: etapas, próximas acciones y volumen estimado de unidades'},
+    {time:'17:20', type:'tarea',        text:'Planificar degustaciones y visitas de fábrica para esta semana'},
+  ],
+  2: [ // MARTES
+    {time:'08:50', type:'tarea',        text:'Revisar pipeline y priorizar oportunidades en "Degustación / Visita"'},
+    {time:'09:15', type:'recordatorio', text:'Seguimiento pedidos en curso: confirmar volúmenes y fechas de entrega'},
+    {time:'10:00', type:'tarea',        text:'Prospección fría — 6 llamadas a distribuidores de alimentación'},
+    {time:'10:45', type:'evento',       text:'Bloque visitas / degustaciones concertadas — llevar muestras de los 5 formatos'},
+    {time:'12:00', type:'tarea',        text:'Preparar presupuesto de maquila: calcular coste por sobre según formato y volumen'},
+    {time:'16:00', type:'tarea',        text:'Prospección tarde — 6 llamadas a tiendas gourmet y delicatessen'},
+    {time:'17:00', type:'recordatorio', text:'Actualizar pipeline y registrar resultado de degustaciones del día'},
+  ],
+  3: [ // MIÉRCOLES
+    {time:'08:50', type:'tarea',        text:'Revisar pipeline y priorizar propuestas pendientes de respuesta'},
+    {time:'09:15', type:'tarea',        text:'Enviar propuestas terminadas — confirmar recepción por teléfono'},
+    {time:'09:45', type:'recordatorio', text:'Follow-up propuestas enviadas hace +5 días — llamar para resolver dudas sobre precio o formato'},
+    {time:'10:30', type:'tarea',        text:'Negociación con clientes de >50.000 unidades/mes — revisar margen y condiciones'},
+    {time:'11:15', type:'tarea',        text:'Prospección fría — 6 llamadas a restaurantes y cadenas'},
+    {time:'12:00', type:'evento',       text:'Visita de fábrica si hay concertada — mostrar proceso de loncheado y envasado'},
+    {time:'16:00', type:'tarea',        text:'Prospección tarde — 6 llamadas a marcas blancas'},
+    {time:'17:00', type:'recordatorio', text:'Actualizar pipeline con resultados de negociaciones del día'},
+  ],
+  4: [ // JUEVES
+    {time:'08:50', type:'tarea',        text:'Revisar pipeline y confirmar citas de la semana'},
+    {time:'09:15', type:'tarea',        text:'Prospección fría — 6 llamadas a nuevos prospectos (maquileros / distribuidores)'},
+    {time:'10:00', type:'recordatorio', text:'Follow-up: clientes en "Pedido" sin confirmar volumen — cerrar compromiso'},
+    {time:'10:45', type:'tarea',        text:'Preparar degustaciones y visitas de la semana siguiente — confirmar citas'},
+    {time:'11:30', type:'tarea',        text:'Contactar 3 posibles clientes de marca propia — presentar producto terminado'},
+    {time:'12:00', type:'tarea',        text:'Prospección fría — 4 llamadas adicionales'},
+    {time:'16:00', type:'tarea',        text:'Prospección tarde — 6 llamadas'},
+    {time:'17:00', type:'recordatorio', text:'Actualizar pipeline: etapas, volúmenes estimados y próximas acciones'},
+  ],
+  5: [ // VIERNES
+    {time:'08:50', type:'tarea',        text:'Revisión semanal de KPIs Lonchería: objetivo 580.000€ · pedidos cerrados · pipeline ponderado'},
+    {time:'09:20', type:'recordatorio', text:'Llamadas de cierre: contactar clientes en "Pedido" — confirmar primer pedido o volumen'},
+    {time:'10:00', type:'tarea',        text:'Prospección fría — 6 llamadas nuevas'},
+    {time:'10:45', type:'recordatorio', text:'Verificar que todas las acciones de la semana están actualizadas en el pipeline'},
+    {time:'11:30', type:'tarea',        text:'Actualizar todas las oportunidades — etapas, volúmenes y próximas acciones'},
+    {time:'12:00', type:'informe',      text:'Generar y enviar informe semanal Lonchería a dirección'},
+    {time:'12:30', type:'tarea',        text:'Planificar degustaciones, visitas y acciones clave de la semana siguiente'},
+    {time:'16:00', type:'tarea',        text:'Prospección tarde — 4 llamadas'},
+    {time:'17:00', type:'tarea',        text:'Cierre de semana: pipeline actualizado y agenda lista para el lunes'},
+  ],
+};
+
+// Selector dinámico de tasks según negocio activo
+function getTasks() {
+  return currentNegocio === 'loncheria' ? TASKS_LONCHERIA : TASKS_NINGENIA;
+}
+
 const MONTHS  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAYS_F  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const DAYS_S  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-const PROB    = {prospecto:0.05,contacto:0.10,cualificado:0.25,visita:0.40,propuesta:0.65,negociacion:0.85,cerrado:1,descartado:0};
-const OBJETIVO= 350000;
+const PROB    = {prospecto:0.05,contacto:0.10,cualificado:0.25,visita:0.40,degustacion:0.30,propuesta:0.65,pedido:0.85,negociacion:0.85,cerrado:1,descartado:0};
 const LS_CFG  = 'ningenia_firebase_cfg';
 const LS_DATA = 'ningenia_pipeline_data';
 const LS_CHK  = 'ningenia_chk_';
@@ -438,11 +540,33 @@ async function boot() {
   calYear  = now.getFullYear();
   calMonth = now.getMonth();
 
+  // Apply saved negocio theme
+  applyNegocioTheme();
+
   renderToday();
   renderWeek();
   renderCalendar();
   renderReports();
   checkFriday();
+}
+
+function applyNegocioTheme() {
+  const n = NEGOCIOS_AG[currentNegocio];
+  document.getElementById('brand-icon').textContent = n.icono;
+  document.getElementById('brand-name').textContent = 'Agenda Comercial — ' + n.nombre;
+  document.getElementById('header').style.background = `linear-gradient(135deg,${n.colorDark},${n.colorMid})`;
+  document.getElementById('negocio-bar').style.background = n.colorDark;
+  document.querySelectorAll('.neg-btn').forEach(b => {
+    const active = b.dataset.neg === currentNegocio;
+    b.style.background  = active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+    b.style.color        = active ? 'white' : 'rgba(255,255,255,0.65)';
+    b.style.borderColor  = active ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)';
+  });
+}
+
+// Devuelve solo los datos del pipeline del negocio activo
+function negData() {
+  return pipelineData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
 }
 
 function loadLocal() {
@@ -471,16 +595,16 @@ function renderToday() {
   document.getElementById('day-title').textContent = '📅 '+dayName+' — '+dateStr;
 
   // Pipeline actions due today
-  const pipeActions = pipelineData.filter(o=>
+  const pipeActions = negData().filter(o=>
     !['cerrado','descartado'].includes(o.etapa) && o.fechaAccion===todayStr && o.proximaAccion
   );
 
   // Strategy tasks for today
-  const stratTasks = TASKS[dow] || [];
+  const stratTasks = getTasks()[dow] || [];
 
   // Stats
-  const active    = pipelineData.filter(o=>!['cerrado','descartado'].includes(o.etapa));
-  const closed    = pipelineData.filter(o=>o.etapa==='cerrado');
+  const active    = negData().filter(o=>!['cerrado','descartado'].includes(o.etapa));
+  const closed    = negData().filter(o=>o.etapa==='cerrado');
   const closedVal = closed.reduce((s,o)=>s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0),0);
   const overdue   = active.filter(o=>o.fechaAccion&&o.fechaAccion<todayStr);
   const visits    = active.filter(o=>o.etapa==='visita'&&o.fechaAccion===todayStr);
@@ -613,8 +737,8 @@ function renderWeek() {
     const dStr   = fmt(d);
     const isToday= dStr===todayStr;
     const isPast = dStr<todayStr;
-    const dayTasks = TASKS[i+1]||[];
-    const pipeActs = pipelineData.filter(o=>!['cerrado','descartado'].includes(o.etapa)&&o.fechaAccion===dStr);
+    const dayTasks = getTasks()[i+1]||[];
+    const pipeActs = negData().filter(o=>!['cerrado','descartado'].includes(o.etapa)&&o.fechaAccion===dStr);
     const hdrClass = isToday?'today':isPast?'past':'future';
     html += `<div class="week-day-col">
       <div class="week-day-header ${hdrClass}">${dayNames[i]}<br><span style="font-size:10px;opacity:0.85;">${d.getDate()}/${d.getMonth()+1}</span></div>
@@ -653,15 +777,16 @@ function renderCalendar() {
 
   // Events map from pipeline
   const evMap = {};
-  pipelineData.forEach(o=>{
+  negData().forEach(o=>{
     if (!o.fechaAccion||['cerrado','descartado'].includes(o.etapa)) return;
     if (!evMap[o.fechaAccion]) evMap[o.fechaAccion]=[];
     const type = o.etapa==='visita'?'evento':'pipeline';
     evMap[o.fechaAccion].push({type, label:o.empresa, detail:o.proximaAccion||''});
   });
   // Strategy recurring events (show on calendar as dots)
-  Object.keys(TASKS).forEach(dow=>{
-    TASKS[dow].forEach(t=>{
+  const tasks = getTasks();
+  Object.keys(tasks).forEach(dow=>{
+    tasks[dow].forEach(t=>{
       if (t.type==='evento'||t.type==='informe') {
         // Mark every occurrence this month
         for (let d=1;d<=daysInMon;d++) {
@@ -716,8 +841,8 @@ function showDay(ds) {
   const dow   = d.getDay();
   document.getElementById('detail-title').textContent = DAYS_F[dow]+', '+d.getDate()+' de '+MONTHS[d.getMonth()]+' '+d.getFullYear();
 
-  const pipeEvs = pipelineData.filter(o=>o.fechaAccion===ds&&!['cerrado','descartado'].includes(o.etapa));
-  const stratTs = TASKS[dow]||[];
+  const pipeEvs = negData().filter(o=>o.fechaAccion===ds&&!['cerrado','descartado'].includes(o.etapa));
+  const stratTs = getTasks()[dow]||[];
   let html='';
 
   if (pipeEvs.length>0) {
@@ -787,14 +912,14 @@ function generateDailyReport() {
   const now      = new Date();
   const todayStr = fmt(now);
   const dow      = now.getDay();
-  const stratTs  = TASKS[dow]||[];
-  const pipeActs = pipelineData.filter(o=>!['cerrado','descartado'].includes(o.etapa)&&o.fechaAccion===todayStr);
+  const stratTs  = getTasks()[dow]||[];
+  const pipeActs = negData().filter(o=>!['cerrado','descartado'].includes(o.etapa)&&o.fechaAccion===todayStr);
   const checked  = JSON.parse(localStorage.getItem(LS_CHK+todayStr)||'[]');
   const total    = stratTs.length+pipeActs.length;
   const done     = checked.length;
   const pct      = total>0?Math.round(done/total*100):0;
-  const active   = pipelineData.filter(o=>!['cerrado','descartado'].includes(o.etapa));
-  const closed   = pipelineData.filter(o=>o.etapa==='cerrado');
+  const active   = negData().filter(o=>!['cerrado','descartado'].includes(o.etapa));
+  const closed   = negData().filter(o=>o.etapa==='cerrado');
   const closedV  = closed.reduce((s,o)=>s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0),0);
   const pipeW    = active.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0)*(PROB[o.etapa]||0),0);
   const overdue  = active.filter(o=>o.fechaAccion&&o.fechaAccion<todayStr);
@@ -879,27 +1004,30 @@ function generateWeeklyReport() {
   const dow = now.getDay()===0?7:now.getDay();
   const mon = new Date(now); mon.setDate(now.getDate()-dow+1);
   const fri = new Date(mon); fri.setDate(mon.getDate()+4);
-  const active   = pipelineData.filter(o=>!['cerrado','descartado'].includes(o.etapa));
-  const closed   = pipelineData.filter(o=>o.etapa==='cerrado');
+  const active   = negData().filter(o=>!['cerrado','descartado'].includes(o.etapa));
+  const closed   = negData().filter(o=>o.etapa==='cerrado');
   const closedV  = closed.reduce((s,o)=>s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0),0);
   const pipeW    = active.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0)*(PROB[o.etapa]||0),0);
-  const pct      = Math.min(Math.round(closedV/OBJETIVO*100),100);
+  const pct      = Math.min(Math.round(closedV/NEGOCIOS_AG[currentNegocio].objetivo*100),100);
   const todayStr = fmt(now);
   const overdue  = active.filter(o=>o.fechaAccion&&o.fechaAccion<todayStr);
   const weekLabel= mon.getDate()+' de '+MONTHS[mon.getMonth()]+' — '+fri.getDate()+' de '+MONTHS[fri.getMonth()]+' '+fri.getFullYear();
-  const stages   = [{id:'prospecto',label:'Prospecto',prob:0.05,color:'#95a5a6'},{id:'contacto',label:'Contacto',prob:0.10,color:'#3498db'},{id:'cualificado',label:'Cualificado',prob:0.25,color:'#2980b9'},{id:'visita',label:'Visita/Demo',prob:0.40,color:'#e67e22'},{id:'propuesta',label:'Propuesta Enviada',prob:0.65,color:'#c0392b'},{id:'negociacion',label:'Negociación',prob:0.85,color:'#27ae60'}];
+  const n = NEGOCIOS_AG[currentNegocio];
+  const stages = currentNegocio === 'loncheria'
+    ? [{id:'prospecto',label:'Prospecto',prob:0.05,color:'#95a5a6'},{id:'degustacion',label:'Degustación/Visita',prob:0.30,color:'#e67e22'},{id:'propuesta',label:'Propuesta',prob:0.60,color:'#c0392b'},{id:'pedido',label:'Pedido',prob:0.85,color:'#27ae60'}]
+    : [{id:'prospecto',label:'Prospecto',prob:0.05,color:'#95a5a6'},{id:'contacto',label:'Contacto',prob:0.10,color:'#3498db'},{id:'cualificado',label:'Cualificado',prob:0.25,color:'#2980b9'},{id:'visita',label:'Visita/Demo',prob:0.40,color:'#e67e22'},{id:'propuesta',label:'Propuesta Enviada',prob:0.65,color:'#c0392b'},{id:'negociacion',label:'Negociación',prob:0.85,color:'#27ae60'}];
 
   const html = `<div style="font-family:Arial,sans-serif;">
-<div style="background:linear-gradient(135deg,#1F4E79,#2E75B6);color:white;padding:30px 34px;">
-  <div style="font-size:11px;letter-spacing:2px;opacity:0.7;margin-bottom:10px;">INFORME SEMANAL · NINGENIA</div>
+<div style="background:linear-gradient(135deg,${n.colorDark},${n.colorMid});color:white;padding:30px 34px;">
+  <div style="font-size:11px;letter-spacing:2px;opacity:0.7;margin-bottom:10px;">INFORME SEMANAL · ${n.nombre.toUpperCase()}</div>
   <div style="font-size:24px;font-weight:800;margin-bottom:4px;">Informe de Seguimiento Semanal</div>
   <div style="font-size:13px;opacity:0.85;">Semana del ${weekLabel}</div>
-  <div style="font-size:12px;opacity:0.7;margin-top:5px;">Para: David Suárez &amp; Roberto García · Ningenia</div>
+  <div style="font-size:12px;opacity:0.7;margin-top:5px;">Comercial: David</div>
 </div>
 <div style="padding:26px 34px;background:white;">
-  <h3 style="color:#1F4E79;border-bottom:2px solid #D5E8F0;padding-bottom:8px;margin-bottom:14px;font-size:14px;">📌 Resumen Ejecutivo</h3>
+  <h3 style="color:${n.colorDark};border-bottom:2px solid ${n.colorLight};padding-bottom:8px;margin-bottom:14px;font-size:14px;">📌 Resumen Ejecutivo</h3>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
-    ${[{l:'Objetivo anual',v:pct+'%',sub:'€'+fmtN(closedV)+' de €'+fmtN(OBJETIVO),c:'#27ae60'},
+    ${[{l:'Objetivo anual',v:pct+'%',sub:'€'+fmtN(closedV)+' de €'+fmtN(NEGOCIOS_AG[currentNegocio].objetivo),c:'#27ae60'},
        {l:'Pipeline ponderado',v:'€'+fmtN(pipeW),sub:'Valor ajustado por probabilidad',c:'#1F4E79'},
        {l:'Oportunidades activas',v:active.length,sub:'En las 6 etapas del pipeline',c:'#2E75B6'},
     ].map(k=>`<div style="background:#EBF4FA;padding:14px;border-radius:6px;border-top:3px solid ${k.c};">

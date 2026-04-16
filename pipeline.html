@@ -808,6 +808,18 @@ body {
     <button class="btn-icon" onclick="openSetupModal()">⚙ Config</button>
   </div>
 </div>
+<!-- NEGOCIO SELECTOR -->
+<div id="negocio-bar" style="background:#1a3f60;padding:6px 20px;display:flex;align-items:center;gap:8px;overflow-x:auto;">
+  <span style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;letter-spacing:1px;white-space:nowrap;">EMPRESA:</span>
+  <button class="neg-btn active" data-neg="ningenia" onclick="switchNegocio('ningenia')"
+    style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:4px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;transition:all 0.2s;">
+    ⬡ Ningenia
+  </button>
+  <button class="neg-btn" data-neg="loncheria" onclick="switchNegocio('loncheria')"
+    style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:4px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;transition:all 0.2s;">
+    🥩 La Lonchería del Jamón
+  </button>
+</div>
 
 <!-- TABS -->
 <div id="tabs">
@@ -1098,32 +1110,134 @@ body {
 
 <script>
 // ══════════════════════════════════════
-// CONSTANTS
+// MULTI-NEGOCIO CONFIG
 // ══════════════════════════════════════
-const OBJETIVO_ANUAL = 350000;
-const STAGES_ACTIVE = [
-  { id: 'prospecto',   label: 'Prospecto',        prob: 0.05, color: '#95a5a6' },
-  { id: 'contacto',    label: 'Contacto',          prob: 0.10, color: '#3498db' },
-  { id: 'cualificado', label: 'Cualificado',       prob: 0.25, color: '#2980b9' },
-  { id: 'visita',      label: 'Visita / Demo',     prob: 0.40, color: '#e67e22' },
-  { id: 'propuesta',   label: 'Propuesta Enviada', prob: 0.65, color: '#c0392b' },
-  { id: 'negociacion', label: 'Negociación',       prob: 0.85, color: '#27ae60' },
-];
-const STAGE_MAP = {};
-STAGES_ACTIVE.forEach(s => STAGE_MAP[s.id] = s);
-STAGE_MAP['cerrado']    = { id: 'cerrado',    label: 'Cerrado',    prob: 1,    color: '#27ae60' };
-STAGE_MAP['descartado'] = { id: 'descartado', label: 'Descartado', prob: 0,    color: '#95a5a6' };
+const NEGOCIOS = {
+  ningenia: {
+    id: 'ningenia',
+    nombre: 'Ningenia',
+    icono: '⬡',
+    colorDark: '#1F4E79',
+    colorMid:  '#2E75B6',
+    colorLight:'#D5E8F0',
+    colorPale: '#EBF4FA',
+    objetivo:  350000,
+    stages: [
+      { id:'prospecto',   label:'Prospecto',        prob:0.05, color:'#95a5a6' },
+      { id:'contacto',    label:'Contacto',          prob:0.10, color:'#3498db' },
+      { id:'cualificado', label:'Cualificado',       prob:0.25, color:'#2980b9' },
+      { id:'visita',      label:'Visita / Demo',     prob:0.40, color:'#e67e22' },
+      { id:'propuesta',   label:'Propuesta Enviada', prob:0.65, color:'#c0392b' },
+      { id:'negociacion', label:'Negociación',       prob:0.85, color:'#27ae60' },
+    ],
+    soluciones: ['Automatización línea producción','Sorter automático','Sistema visión artificial','Integración ERP/MES','Robotización picking','Otro / Consultoría'],
+    sectores:   ['Alimentación','Industria harinera','Bollería industrial','Panadería industrial','Lácteos','Café y bebidas','Industria alimentaria','Otro'],
+    comerciales:['David'],
+  },
+  loncheria: {
+    id: 'loncheria',
+    nombre: 'La Lonchería del Jamón',
+    icono: '🥩',
+    colorDark: '#7D2436',
+    colorMid:  '#B03A2E',
+    colorLight:'#F5CBA7',
+    colorPale: '#FEF5EC',
+    objetivo:  580000,
+    stages: [
+      { id:'prospecto',   label:'Prospecto',          prob:0.05, color:'#95a5a6' },
+      { id:'degustacion', label:'Degustación / Visita',prob:0.30, color:'#e67e22' },
+      { id:'propuesta',   label:'Propuesta',           prob:0.60, color:'#c0392b' },
+      { id:'pedido',      label:'Pedido',               prob:0.85, color:'#27ae60' },
+    ],
+    soluciones: ['Maquila (cliente aporta materia prima)','Marca propia (producto terminado)','Ambas líneas'],
+    sectores:   ['Maquilero','Marca Blanca','Tienda Gourmet','Restaurante','Distribuidor','Otro'],
+    comerciales:['David'],
+  }
+};
+
+const LS_NEG = 'ningenia_current_negocio';
+let currentNegocio = localStorage.getItem(LS_NEG) || 'ningenia';
+
+function neg()       { return NEGOCIOS[currentNegocio]; }
+function stagesActive() { return neg().stages; }
+function buildStageMap() {
+  const m = {};
+  stagesActive().forEach(s => m[s.id] = s);
+  m['cerrado']    = { id:'cerrado',    label:'Cerrado',    prob:1, color:'#27ae60' };
+  m['descartado'] = { id:'descartado', label:'Descartado', prob:0, color:'#95a5a6' };
+  return m;
+}
+// Legacy aliases (used in existing render functions)
+function getStages()   { return stagesActive(); }
+function getStageMap() { return buildStageMap(); }
+
+// Keep references updated on switch
+let STAGES_ACTIVE = stagesActive();
+let STAGE_MAP     = buildStageMap();
+let OBJETIVO_ANUAL= neg().objetivo;
 
 // ══════════════════════════════════════
 // STATE
 // ══════════════════════════════════════
-let allData = [];     // all opportunities
+let allData = [];
 let filteredData = [];
 let editingId = null;
 let dragId = null;
 let firebaseDb = null;
 let unsubscribe = null;
 let currentMobileStage = 'prospecto';
+
+function switchNegocio(id) {
+  if (id === currentNegocio) return;
+  currentNegocio = id;
+  localStorage.setItem(LS_NEG, id);
+  STAGES_ACTIVE = stagesActive();
+  STAGE_MAP     = buildStageMap();
+  OBJETIVO_ANUAL= neg().objetivo;
+  currentMobileStage = STAGES_ACTIVE[0].id;
+  // Apply theme
+  applyTheme();
+  // Update header
+  document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — Pipeline Comercial';
+  document.querySelectorAll('.neg-btn').forEach(b => {
+    const isActive = b.dataset.neg === id;
+    b.classList.toggle('active', isActive);
+    b.style.background  = isActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+    b.style.color        = isActive ? 'white' : 'rgba(255,255,255,0.65)';
+    b.style.borderColor  = isActive ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)';
+  });
+  // Update form selects
+  updateFormSelects();
+  applyFilters();
+  renderAll();
+}
+
+function applyTheme() {
+  const n = neg();
+  const r = document.documentElement.style;
+  r.setProperty('--blue-dark',  n.colorDark);
+  r.setProperty('--blue-mid',   n.colorMid);
+  r.setProperty('--blue-light', n.colorLight);
+  r.setProperty('--blue-pale',  n.colorPale);
+  const hdr = document.getElementById('header');
+  if (hdr) hdr.style.background = `linear-gradient(135deg,${n.colorDark},${n.colorMid})`;
+  const bar = document.getElementById('negocio-bar');
+  if (bar) bar.style.background = n.colorDark;
+}
+
+function updateFormSelects() {
+  const n = neg();
+  // Solution select
+  const fSol = document.getElementById('f-solucion');
+  if (fSol) fSol.innerHTML = n.soluciones.map(s=>`<option>${s}</option>`).join('');
+  // Etapa select
+  const fEtapa = document.getElementById('f-etapa');
+  if (fEtapa) fEtapa.innerHTML = [
+    ...n.stages.map(s=>`<option value="${s.id}">${s.label}</option>`),
+    '<option value="cerrado">Cerrado ✅</option>',
+    '<option value="descartado">Descartado ❌</option>',
+  ].join('');
+}
 
 // ══════════════════════════════════════
 // FIREBASE / LOCAL STORAGE
@@ -1233,15 +1347,18 @@ function applyFilters() {
   const sector    = document.getElementById('filter-sector')?.value || '';
   const search    = (document.getElementById('filter-search')?.value || '').toLowerCase();
 
-  filteredData = allData.filter(o => {
+  // Filter by current negocio first
+  const negData = allData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
+
+  filteredData = negData.filter(o => {
     if (comercial && o.comercial !== comercial) return false;
     if (sector    && o.sector !== sector)       return false;
     if (search    && !o.empresa?.toLowerCase().includes(search)) return false;
     return true;
   });
 
-  // Populate sector filter
-  const sectors = [...new Set(allData.map(o => o.sector).filter(Boolean))].sort();
+  // Populate sector filter from negocio data
+  const sectors = [...new Set(negData.map(o => o.sector).filter(Boolean))].sort();
   const sel = document.getElementById('filter-sector');
   const cur = sel?.value;
   if (sel) {
@@ -1619,7 +1736,7 @@ function toggleCierreSection() {
 async function saveOportunidad() {
   const empresa = document.getElementById('f-empresa').value.trim();
   if (!empresa) { toast('El nombre de la empresa es obligatorio', 'error'); return; }
-  const opp = editingId ? { ...allData.find(o => o.id === editingId) } : { id: genId(), fechaEntrada: today(), historial: [] };
+  const opp = editingId ? { ...allData.find(o => o.id === editingId) } : { id: genId(), fechaEntrada: today(), historial: [], negocio: currentNegocio };
   const prevEtapa = opp.etapa;
   opp.empresa        = empresa;
   opp.sector         = document.getElementById('f-sector').value.trim();
@@ -1816,6 +1933,20 @@ function daysBetween(d1, d2) {
 // ══════════════════════════════════════
 // INIT
 // ══════════════════════════════════════
+// Apply saved negocio theme on load
+applyTheme();
+// Set active button
+document.querySelectorAll('.neg-btn').forEach(b => {
+  const isActive = b.dataset.neg === currentNegocio;
+  b.classList.toggle('active', isActive);
+  b.style.background = isActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+  b.style.color       = isActive ? 'white' : 'rgba(255,255,255,0.65)';
+  b.style.borderColor = isActive ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)';
+});
+// Update brand title
+document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — Pipeline Comercial';
+// Update form selects
+updateFormSelects();
 initFirebase();
 </script>
 </body>
