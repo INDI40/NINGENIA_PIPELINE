@@ -663,11 +663,118 @@ body {
 .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
 .empty-state p { font-size: 14px; }
 
+/* ── MOBILE STAGE SELECTOR ── */
+#mobile-stage-selector {
+  display: none;
+  padding: 10px 12px;
+  background: white;
+  border-bottom: 1px solid var(--gray-light);
+  overflow-x: auto;
+  gap: 6px;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+#mobile-stage-selector::-webkit-scrollbar { display: none; }
+.mobile-stage-btn {
+  display: inline-block;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  border: none;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.mobile-stage-btn.active { opacity: 1; transform: scale(1.05); }
+
+/* Mobile card list */
+#mobile-card-list {
+  display: none;
+  padding: 12px;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  border-left: 4px solid var(--blue-mid);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mobile-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.mobile-card-empresa { font-weight: 700; font-size: 15px; color: var(--blue-dark); }
+.mobile-card-ticket { font-weight: 800; font-size: 16px; color: var(--text); }
+.mobile-card-mid { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mobile-card-sector { font-size: 12px; color: var(--text-light); }
+.mobile-card-comercial { font-size: 11px; background: var(--blue-pale); color: var(--blue-dark); padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.mobile-card-accion { font-size: 12px; color: var(--text-light); }
+.mobile-card-alert { font-size: 12px; color: var(--red); font-weight: 700; }
+.mobile-card-actions { display: flex; gap: 8px; margin-top: 4px; }
+.mobile-card-actions button { flex: 1; padding: 8px; font-size: 13px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-weight: 600; }
+.mobile-btn-edit { background: var(--blue-pale); color: var(--blue-dark); }
+.mobile-btn-discard { background: var(--gray-light); color: var(--text-light); }
+
 /* ── RESPONSIVE ── */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  /* Header */
+  #header { padding: 0 12px; height: 50px; }
+  #header .brand span:last-child { font-size: 14px; }
+  #sync-status { display: none; }
+  .btn-icon { padding: 5px 8px; font-size: 12px; }
+
+  /* Tabs */
+  #tabs { padding: 0 8px; overflow-x: auto; gap: 0; }
+  #tabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 10px 12px; font-size: 12px; white-space: nowrap; }
+
+  /* Toolbar */
+  #toolbar { padding: 10px 12px; gap: 8px; }
+  .toolbar-filters { display: none; }
+  #toolbar .btn { flex: 1; justify-content: center; font-size: 13px; }
+
+  /* Content */
+  #content { padding: 0; }
+
+  /* Hide desktop kanban, show mobile view */
+  #kanban-board { display: none !important; }
+  #mobile-stage-selector { display: flex; }
+  #mobile-card-list { display: flex; }
+
+  /* Dashboard KPIs */
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi-card { padding: 14px; }
+  .kpi-value { font-size: 22px; }
+  .dashboard-section { margin-bottom: 20px; }
+  .dashboard-title { font-size: 14px; }
+
+  /* Stage table scroll */
+  .stage-table { font-size: 11px; display: block; overflow-x: auto; }
+
+  /* Historial tab */
+  #tab-historial > div { grid-template-columns: 1fr; }
+  .list-item { flex-wrap: wrap; gap: 6px; }
+  .list-empresa { min-width: 100%; }
+
+  /* Modal full screen */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { max-width: 100%; max-height: 95vh; border-radius: var(--radius) var(--radius) 0 0; }
   .form-grid { grid-template-columns: 1fr; }
-  #toolbar { flex-wrap: wrap; }
-  .toolbar-filters { margin-left: 0; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px; }
+
+  /* Setup modal */
+  #setup-modal .modal-overlay { align-items: center; padding: 16px; }
+  #setup-modal .modal { border-radius: var(--radius); }
+
+  /* Toast */
+  #toast-container { bottom: 12px; right: 12px; left: 12px; }
+  .toast { max-width: 100%; }
 }
 </style>
 </head>
@@ -717,6 +824,10 @@ body {
 
   <!-- PIPELINE TAB -->
   <div id="tab-pipeline" class="tab-view active">
+    <!-- Mobile stage selector -->
+    <div id="mobile-stage-selector"></div>
+    <div id="mobile-card-list"></div>
+    <!-- Desktop kanban -->
     <div id="kanban-board"></div>
   </div>
 
@@ -988,6 +1099,7 @@ let editingId = null;
 let dragId = null;
 let firebaseDb = null;
 let unsubscribe = null;
+let currentMobileStage = 'prospecto';
 
 // ══════════════════════════════════════
 // FIREBASE / LOCAL STORAGE
@@ -1112,8 +1224,63 @@ function switchTab(tab) {
 // ══════════════════════════════════════
 function renderAll() {
   renderKanban();
+  renderMobileKanban();
   renderDashboard();
   renderHistorial();
+}
+
+// ══════════════════════════════════════
+// MOBILE KANBAN
+// ══════════════════════════════════════
+function renderMobileKanban() {
+  const selector = document.getElementById('mobile-stage-selector');
+  const list = document.getElementById('mobile-card-list');
+  if (!selector || !list) return;
+
+  // Render stage buttons
+  selector.innerHTML = STAGES_ACTIVE.map(st => {
+    const count = filteredData.filter(o => o.etapa === st.id).length;
+    return `<button class="mobile-stage-btn ${st.id === currentMobileStage ? 'active' : ''}"
+      style="background:${st.color}"
+      onclick="switchMobileStage('${st.id}')">
+      ${st.label} (${count})
+    </button>`;
+  }).join('');
+
+  // Render cards for selected stage
+  const opps = filteredData.filter(o => o.etapa === currentMobileStage);
+  const todayStr = today();
+
+  if (opps.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Sin oportunidades en esta etapa</p></div>`;
+  } else {
+    list.innerHTML = opps.map(opp => {
+      const overdue = opp.fechaAccion && opp.fechaAccion < todayStr;
+      const ticket = opp.ticketEstimado ? '€' + parseInt(opp.ticketEstimado).toLocaleString('es-ES') : '—';
+      const stColor = STAGE_MAP[opp.etapa]?.color || 'var(--blue-mid)';
+      return `<div class="mobile-card" style="border-left-color:${stColor}">
+        <div class="mobile-card-top">
+          <div class="mobile-card-empresa">${esc(opp.empresa || 'Sin nombre')}</div>
+          <div class="mobile-card-ticket">${ticket}</div>
+        </div>
+        <div class="mobile-card-mid">
+          <span class="mobile-card-sector">${esc(opp.sector || '—')}</span>
+          <span class="mobile-card-comercial">${esc(opp.comercial || '—')}</span>
+        </div>
+        ${opp.proximaAccion ? `<div class="mobile-card-accion">📌 ${esc(opp.proximaAccion)}${opp.fechaAccion ? ' · ' + fmtDate(opp.fechaAccion) : ''}</div>` : ''}
+        ${overdue ? `<div class="mobile-card-alert">⚠ Acción vencida — ${fmtDate(opp.fechaAccion)}</div>` : ''}
+        <div class="mobile-card-actions">
+          <button class="mobile-btn-edit" onclick="openEditModal('${opp.id}')">✏ Editar</button>
+          <button class="mobile-btn-discard" onclick="quickDiscard('${opp.id}')">✕ Descartar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function switchMobileStage(stageId) {
+  currentMobileStage = stageId;
+  renderMobileKanban();
 }
 
 // ══════════════════════════════════════
