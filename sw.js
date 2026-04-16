@@ -1,4 +1,4 @@
-const CACHE = 'ningenia-v1';
+const CACHE = 'ningenia-v3';
 const BASE  = '/NINGENIA_PIPELINE/';
 const URLS  = [
   BASE + 'pipeline.html',
@@ -23,16 +23,16 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Network-first: always try network, fall back to cache
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(resp => {
-        if (resp && resp.status === 200) {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return resp;
-      }).catch(() => caches.match(BASE + 'pipeline.html'));
-    })
+    fetch(e.request).then(resp => {
+      if (resp && resp.status === 200) {
+        const clone = resp.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return resp;
+    }).catch(() =>
+      caches.match(e.request).then(cached => cached || caches.match(BASE + 'pipeline.html'))
+    )
   );
 });
