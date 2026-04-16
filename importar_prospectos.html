@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importador de Prospectos — Ningenia</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --blue-dark: #1F4E79;
+  --blue-mid: #2E75B6;
+  --blue-light: #D5E8F0;
+  --blue-pale: #EBF4FA;
+  --green: #27ae60;
+  --red: #e74c3c;
+  --orange: #e67e22;
+  --gray-light: #ecf0f1;
+  --text: #2c3e50;
+  --text-light: #7f8c8d;
+  --shadow: 0 2px 8px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.18);
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: var(--text); min-height: 100vh; }
+
+/* HEADER */
+#header {
+  background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+  color: white; padding: 0 24px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--shadow); position: sticky; top: 0; z-index: 10;
+}
+#header .brand { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+.btn-back-hdr { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.btn-back-hdr:hover { background: rgba(255,255,255,0.25); }
+
+/* LAYOUT */
+#layout { max-width: 900px; margin: 28px auto; padding: 0 20px 60px; display: flex; flex-direction: column; gap: 20px; }
+
+/* STEPS */
+.step-card {
+  background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+  overflow: hidden; transition: opacity 0.3s;
+}
+.step-card.disabled { opacity: 0.45; pointer-events: none; }
+.step-header {
+  background: var(--blue-pale); border-bottom: 2px solid var(--blue-light);
+  padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+}
+.step-num {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--blue-mid);
+  color: white; font-weight: 800; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-num.done { background: var(--green); }
+.step-title { font-weight: 700; font-size: 15px; color: var(--blue-dark); }
+.step-subtitle { font-size: 12px; color: var(--text-light); margin-top: 1px; }
+.step-body { padding: 20px; }
+
+/* FILE DROP */
+#drop-zone {
+  border: 2px dashed #bdc3c7; border-radius: var(--radius);
+  padding: 40px 20px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: #fafbfc;
+}
+#drop-zone:hover, #drop-zone.drag-over { border-color: var(--blue-mid); background: var(--blue-pale); }
+#drop-zone .icon { font-size: 40px; margin-bottom: 10px; }
+#drop-zone p { font-size: 14px; color: var(--text-light); margin-bottom: 8px; }
+#drop-zone strong { color: var(--blue-mid); }
+#file-input { display: none; }
+#file-chosen { margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--green); display: none; }
+
+/* SHEET SELECTOR */
+.sheet-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.sheet-btn {
+  padding: 10px 18px; border: 2px solid var(--blue-light); border-radius: 20px;
+  background: white; cursor: pointer; font-size: 13px; font-weight: 600;
+  color: var(--blue-dark); transition: all 0.2s;
+}
+.sheet-btn:hover { border-color: var(--blue-mid); background: var(--blue-pale); }
+.sheet-btn.active { border-color: var(--blue-mid); background: var(--blue-mid); color: white; }
+
+/* COLUMN MAPPING */
+.mapping-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.map-row { display: flex; flex-direction: column; gap: 4px; }
+.map-label { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.4px; }
+.map-label span { color: var(--red); }
+.map-select {
+  padding: 8px 10px; border: 1px solid #d0d7de; border-radius: 6px;
+  font-size: 13px; color: var(--text); background: white;
+}
+.map-select:focus { outline: none; border-color: var(--blue-mid); }
+.map-select.auto-mapped { border-color: var(--green); background: #f0faf5; }
+
+/* DEFAULT VALUES */
+.defaults-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.def-group { display: flex; flex-direction: column; gap: 4px; }
+.def-group label { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.4px; }
+.def-group input, .def-group select {
+  padding: 8px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 13px; color: var(--text);
+}
+.def-group input:focus, .def-group select:focus { outline: none; border-color: var(--blue-mid); }
+
+/* PREVIEW TABLE */
+.preview-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid var(--blue-light); }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { background: var(--blue-dark); color: white; padding: 9px 12px; text-align: left; font-size: 11px; white-space: nowrap; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--gray-light); color: var(--text); }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: #f8f9fa; }
+.preview-count { font-size: 12px; color: var(--text-light); margin-bottom: 10px; }
+
+/* IMPORT BUTTON */
+.import-area { display: flex; flex-direction: column; gap: 12px; }
+.btn-import {
+  padding: 16px; border: none; border-radius: 8px;
+  background: var(--blue-mid); color: white; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-import:hover { background: var(--blue-dark); }
+.btn-import:disabled { background: #95a5a6; cursor: not-allowed; }
+.btn-import.success { background: var(--green); }
+
+/* STATUS */
+#status-bar {
+  padding: 14px 18px; border-radius: 8px; font-size: 13px;
+  font-weight: 500; display: none; line-height: 1.5;
+}
+#status-bar.ok { background: #eafaf1; border: 1px solid #a9dfbf; color: #1e8449; }
+#status-bar.error { background: #fdedec; border: 1px solid #f5b7b1; color: #c0392b; }
+#status-bar.info { background: var(--blue-pale); border: 1px solid var(--blue-light); color: var(--blue-dark); }
+
+/* Progress */
+.progress { height: 8px; background: var(--gray-light); border-radius: 4px; overflow: hidden; display: none; margin-top: 6px; }
+.progress-bar { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.3s; }
+
+/* Alerts */
+.info-box {
+  background: var(--blue-pale); border: 1px solid var(--blue-light); border-left: 4px solid var(--blue-mid);
+  border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--blue-dark); line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .mapping-grid, .defaults-grid { grid-template-columns: 1fr; }
+  #layout { padding: 0 12px 40px; margin: 16px auto; }
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="brand"><span>⬡</span><span>Importador de Prospectos</span></div>
+  <button class="btn-back-hdr" onclick="window.location.href='pipeline.html'">← Pipeline</button>
+</div>
+
+<div id="layout">
+
+  <!-- INFO -->
+  <div class="info-box">
+    📋 Importa prospectos desde cualquier archivo Excel (.xlsx, .xls) directamente al pipeline. Elige el archivo, la hoja, mapea las columnas y listo.
+  </div>
+
+  <!-- STEP 1: FILE -->
+  <div class="step-card" id="step1">
+    <div class="step-header">
+      <div class="step-num" id="num1">1</div>
+      <div>
+        <div class="step-title">Seleccionar archivo Excel</div>
+        <div class="step-subtitle">Arrastra o haz clic para buscar · Soporta .xlsx y .xls</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onFileDrop(event)">
+        <div class="icon">📂</div>
+        <p>Arrastra tu archivo Excel aquí</p>
+        <p><strong>o haz clic para seleccionar</strong></p>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" onchange="onFileSelect(event)">
+      <div id="file-chosen">✅ <span id="file-name"></span></div>
+    </div>
+  </div>
+
+  <!-- STEP 2: SHEET -->
+  <div class="step-card disabled" id="step2">
+    <div class="step-header">
+      <div class="step-num" id="num2">2</div>
+      <div>
+        <div class="step-title">Seleccionar hoja</div>
+        <div class="step-subtitle">Elige qué hoja del Excel quieres importar</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="sheet-grid" id="sheet-grid"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3: MAPPING -->
+  <div class="step-card disabled" id="step3">
+    <div class="step-header">
+      <div class="step-num" id="num3">3</div>
+      <div>
+        <div class="step-title">Mapear columnas</div>
+        <div class="step-subtitle">Indica qué columna del Excel corresponde a cada campo del pipeline</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="mapping-grid" id="mapping-grid"></div>
+
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--gray-light);">
+        <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:12px;">Valores por defecto (para campos no mapeados)</div>
+        <div class="defaults-grid">
+          <div class="def-group">
+            <label>Etapa inicial</label>
+            <select id="def-etapa">
+              <option value="prospecto" selected>Prospecto</option>
+              <option value="contacto">Contacto</option>
+              <option value="cualificado">Cualificado</option>
+            </select>
+          </div>
+          <div class="def-group">
+            <label>Comercial asignado</label>
+            <select id="def-comercial">
+              <option value="David">David</option>
+              <option value="Comercial 2">Comercial 2</option>
+            </select>
+          </div>
+          <div class="def-group">
+            <label>Solución Ningenia</label>
+            <select id="def-solucion">
+              <option value="">Sin especificar</option>
+              <option value="Sorter automático">Sorter automático</option>
+              <option value="Automatización línea producción">Automatización línea producción</option>
+              <option value="Sistema visión artificial">Sistema visión artificial</option>
+              <option value="Integración ERP/MES">Integración ERP/MES</option>
+              <option value="Robotización picking">Robotización picking</option>
+            </select>
+          </div>
+          <div class="def-group">
+            <label>Fuente / Origen</label>
+            <select id="def-fuente">
+              <option value="Base de datos SABI">Base de datos SABI</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Visita en frío">Visita en frío</option>
+              <option value="Referido">Referido</option>
+              <option value="Evento / Feria">Evento / Feria</option>
+            </select>
+          </div>
+          <div class="def-group" style="grid-column:1/-1">
+            <label>Próxima acción por defecto</label>
+            <input type="text" id="def-accion" value="Investigar empresa y preparar primer contacto">
+          </div>
+          <div class="def-group" style="grid-column:1/-1">
+            <label>Nota adicional (se añade a todas las filas)</label>
+            <input type="text" id="def-nota" placeholder="Ej: Importado desde SABI Sevilla - verificar estado empresa">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: PREVIEW -->
+  <div class="step-card disabled" id="step4">
+    <div class="step-header">
+      <div class="step-num" id="num4">4</div>
+      <div>
+        <div class="step-title">Vista previa</div>
+        <div class="step-subtitle">Revisa los datos antes de importar</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p class="preview-count" id="preview-count"></p>
+      <button style="margin-bottom:14px;padding:8px 16px;background:var(--blue-pale);border:1px solid var(--blue-light);border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--blue-dark);" onclick="refreshPreview()">🔄 Actualizar vista previa</button>
+      <div class="preview-wrap">
+        <table id="preview-table"><thead><tr></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: IMPORT -->
+  <div class="step-card disabled" id="step5">
+    <div class="step-header">
+      <div class="step-num" id="num5">5</div>
+      <div>
+        <div class="step-title">Importar al Pipeline</div>
+        <div class="step-subtitle">Los prospectos se añadirán a Firebase o al almacenamiento local</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="import-area">
+        <button class="btn-import" id="btn-import" onclick="importar()">▶ Importar prospectos</button>
+        <div id="status-bar"></div>
+        <div class="progress" id="progress-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end layout -->
+
+<script>
+// ══════════════════════════════════════
+// CONSTANTS & STATE
+// ══════════════════════════════════════
+const LS_CFG = 'ningenia_firebase_cfg';
+const LS_KEY = 'ningenia_pipeline_data';
+
+// Pipeline target fields
+const PIPELINE_FIELDS = [
+  { id: 'empresa',         label: 'Empresa',              required: true,  keywords: ['nombre','empresa','compañia','razon','razón','name'] },
+  { id: 'sector',          label: 'Sector / Actividad',   required: false, keywords: ['sector','actividad','cnae','industria','activity'] },
+  { id: 'localidad',       label: 'Localidad / Ciudad',   required: false, keywords: ['localidad','ciudad','municipio','poblacion','city','location'] },
+  { id: 'contacto',        label: 'Nombre Contacto',      required: false, keywords: ['contacto','persona','responsable','contact'] },
+  { id: 'cargo',           label: 'Cargo',                required: false, keywords: ['cargo','puesto','position','title'] },
+  { id: 'telefono',        label: 'Teléfono',             required: false, keywords: ['telefono','teléfono','phone','tel','movil','móvil'] },
+  { id: 'email',           label: 'Email',                required: false, keywords: ['email','correo','mail'] },
+  { id: 'ticketEstimado',  label: 'Ticket Estimado (€)',  required: false, keywords: ['ticket','importe','valor','ingresos','ventas','facturacion','revenue','sales'] },
+  { id: 'notas',           label: 'Notas / Observaciones',required: false, keywords: ['nota','notas','observacion','observaciones','comentario','description'] },
+  { id: 'web',             label: 'Web / URL',            required: false, keywords: ['web','url','website','http'] },
+];
+
+let workbook = null;
+let sheetData = [];
+let sheetColumns = [];
+let selectedSheet = null;
+
+// ══════════════════════════════════════
+// STEP 1 — FILE
+// ══════════════════════════════════════
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+}
+function onFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) loadFile(file);
+}
+
+function loadFile(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    alert('Por favor selecciona un archivo Excel (.xlsx o .xls)');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    workbook = XLSX.read(e.target.result, { type: 'array' });
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-chosen').style.display = 'block';
+    document.getElementById('num1').classList.add('done');
+    document.getElementById('num1').textContent = '✓';
+    renderSheets();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══════════════════════════════════════
+// STEP 2 — SHEET
+// ══════════════════════════════════════
+function renderSheets() {
+  const grid = document.getElementById('sheet-grid');
+  grid.innerHTML = workbook.SheetNames.map(name =>
+    `<button class="sheet-btn" onclick="selectSheet('${name.replace(/'/g, "\\'")}')">${name}</button>`
+  ).join('');
+  enableStep('step2');
+}
+
+function selectSheet(name) {
+  selectedSheet = name;
+  document.querySelectorAll('.sheet-btn').forEach(b => b.classList.toggle('active', b.textContent === name));
+  const ws = workbook.Sheets[name];
+  sheetData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  sheetColumns = sheetData.length > 0 ? Object.keys(sheetData[0]) : [];
+  document.getElementById('num2').classList.add('done');
+  document.getElementById('num2').textContent = '✓';
+  renderMapping();
+}
+
+// ══════════════════════════════════════
+// STEP 3 — MAPPING
+// ══════════════════════════════════════
+function renderMapping() {
+  const grid = document.getElementById('mapping-grid');
+  const opts = ['<option value="">(No mapear)</option>'] +
+    sheetColumns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+  grid.innerHTML = PIPELINE_FIELDS.map(field => {
+    const autoCol = autoDetect(field.keywords);
+    return `<div class="map-row">
+      <div class="map-label">${field.label}${field.required ? ' <span>*</span>' : ''}</div>
+      <select class="map-select ${autoCol ? 'auto-mapped' : ''}" id="map-${field.id}" onchange="onMappingChange(this)">
+        ${['<option value="">(No mapear)</option>',
+           ...sheetColumns.map(c => `<option value="${esc(c)}"${c === autoCol ? ' selected' : ''}>${esc(c)}</option>`)
+          ].join('')}
+      </select>
+    </div>`;
+  }).join('');
+
+  enableStep('step3');
+  document.getElementById('num3').classList.add('done');
+  document.getElementById('num3').textContent = '✓';
+  refreshPreview();
+}
+
+function autoDetect(keywords) {
+  for (const col of sheetColumns) {
+    const colLower = col.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    for (const kw of keywords) {
+      if (colLower.includes(kw)) return col;
+    }
+  }
+  return null;
+}
+
+function onMappingChange(sel) {
+  sel.classList.toggle('auto-mapped', !!sel.value);
+  refreshPreview();
+}
+
+// ══════════════════════════════════════
+// STEP 4 — PREVIEW
+// ══════════════════════════════════════
+function getMapping() {
+  const m = {};
+  PIPELINE_FIELDS.forEach(f => {
+    const sel = document.getElementById('map-' + f.id);
+    if (sel && sel.value) m[f.id] = sel.value;
+  });
+  return m;
+}
+
+function buildOpportunity(row, mapping) {
+  const get = (fieldId) => {
+    const col = mapping[fieldId];
+    return col ? String(row[col] || '').trim() : '';
+  };
+
+  const defEtapa    = document.getElementById('def-etapa').value;
+  const defComercial= document.getElementById('def-comercial').value;
+  const defSolucion = document.getElementById('def-solucion').value;
+  const defFuente   = document.getElementById('def-fuente').value;
+  const defAccion   = document.getElementById('def-accion').value;
+  const defNota     = document.getElementById('def-nota').value;
+
+  const empresa = get('empresa');
+  if (!empresa) return null;
+
+  const localidad = get('localidad');
+  const notaExtra = [get('notas'), localidad ? 'Localidad: ' + localidad : '', defNota].filter(Boolean).join(' · ');
+
+  let ticket = parseFloat(String(get('ticketEstimado')).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+
+  return {
+    id: genId(),
+    empresa,
+    sector: get('sector'),
+    contacto: get('contacto'),
+    cargo: get('cargo'),
+    telefono: get('telefono'),
+    email: get('email'),
+    solucion: defSolucion,
+    ticketEstimado: ticket,
+    etapa: defEtapa,
+    comercial: defComercial,
+    fuente: defFuente,
+    proximaAccion: defAccion,
+    fechaAccion: '',
+    fechaContacto: '',
+    notas: notaExtra,
+    historial: [],
+    fechaEntrada: today(),
+  };
+}
+
+function refreshPreview() {
+  const mapping = getMapping();
+  const mapped = Object.keys(mapping);
+
+  // Enable steps
+  if (mapped.length > 0 || sheetData.length > 0) {
+    enableStep('step4');
+    enableStep('step5');
+    document.getElementById('num4').classList.add('done');
+    document.getElementById('num4').textContent = '✓';
+    document.getElementById('num5').classList.add('done');
+    document.getElementById('num5').textContent = '✓';
+  }
+
+  const preview = sheetData.slice(0, 8).map(row => buildOpportunity(row, mapping)).filter(Boolean);
+  const total = sheetData.map(row => buildOpportunity(row, mapping)).filter(Boolean).length;
+
+  document.getElementById('preview-count').textContent =
+    `${total} prospectos listos para importar (mostrando primeros ${Math.min(8, total)})`;
+
+  const cols = ['Empresa', 'Sector', 'Ticket (€)', 'Contacto', 'Notas'];
+  const thead = document.querySelector('#preview-table thead tr');
+  const tbody = document.querySelector('#preview-table tbody');
+
+  thead.innerHTML = cols.map(c => `<th>${c}</th>`).join('');
+  tbody.innerHTML = preview.map(o => `<tr>
+    <td><strong>${esc(o.empresa)}</strong></td>
+    <td>${esc(o.sector || '—')}</td>
+    <td>${o.ticketEstimado ? '€' + o.ticketEstimado.toLocaleString('es-ES') : '—'}</td>
+    <td>${esc(o.contacto || '—')}</td>
+    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(o.notas || '—')}</td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════
+// STEP 5 — IMPORT
+// ══════════════════════════════════════
+async function importar() {
+  const mapping = getMapping();
+  const opps = sheetData.map(row => buildOpportunity(row, mapping)).filter(Boolean);
+
+  if (opps.length === 0) {
+    setStatus('No se encontraron filas válidas. Asegúrate de mapear al menos el campo Empresa.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-import');
+  btn.disabled = true;
+  btn.textContent = '⏳ Importando...';
+  setStatus(`Preparando importación de ${opps.length} prospectos...`, 'info');
+  showProgress(0);
+
+  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
+
+  if (cfg && cfg.apiKey) {
+    try {
+      const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+      const { getFirestore, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
+      const app = getApps().find(a => a.name === 'importer') || initializeApp(cfg, 'importer');
+      const db = getFirestore(app);
+
+      let done = 0;
+      for (const opp of opps) {
+        await setDoc(doc(db, 'oportunidades', opp.id), { ...opp, updatedAt: serverTimestamp() });
+        done++;
+        showProgress(Math.round(done / opps.length * 100));
+        setStatus(`Importando... ${done} de ${opps.length}`, 'info');
+        btn.textContent = `⏳ ${done}/${opps.length}`;
+      }
+      showProgress(100);
+      setStatus(`✅ ${opps.length} prospectos importados correctamente en Firebase. <a href="pipeline.html" style="color:inherit;font-weight:700;">Ir al Pipeline →</a>`, 'ok');
+      btn.textContent = '✅ Importación completada';
+      btn.classList.add('success');
+    } catch (e) {
+      console.error(e);
+      setStatus('Error Firebase: ' + e.message + '. Guardando en local...', 'error');
+      importLocal(opps);
+    }
+  } else {
+    importLocal(opps);
+  }
+}
+
+function importLocal(opps) {
+  const existing = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  localStorage.setItem(LS_KEY, JSON.stringify([...existing, ...opps]));
+  showProgress(100);
+  setStatus(`✅ ${opps.length} prospectos guardados en almacenamiento local. <a href="pipeline.html" style="color:inherit;font-weight:700;">Ir al Pipeline →</a>`, 'ok');
+  const btn = document.getElementById('btn-import');
+  btn.textContent = '✅ Importación completada';
+  btn.classList.add('success');
+}
+
+// ══════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════
+function enableStep(id) {
+  document.getElementById(id).classList.remove('disabled');
+}
+
+function setStatus(html, type) {
+  const el = document.getElementById('status-bar');
+  el.innerHTML = html;
+  el.className = type;
+  el.style.display = 'block';
+}
+
+function showProgress(pct) {
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function genId() { return 'opp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
