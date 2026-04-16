@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda Comercial — Ningenia</title>
+<style>
+:root {
+  --blue-dark:#1F4E79; --blue-mid:#2E75B6; --blue-light:#D5E8F0; --blue-pale:#EBF4FA;
+  --green:#27ae60; --red:#e74c3c; --orange:#e67e22; --purple:#8e44ad;
+  --gray:#95a5a6; --gray-light:#ecf0f1; --text:#2c3e50; --text-light:#7f8c8d;
+  --shadow:0 2px 8px rgba(0,0,0,0.12); --shadow-lg:0 8px 24px rgba(0,0,0,0.18);
+  --radius:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text);min-height:100vh;}
+
+/* HEADER */
+#header{background:linear-gradient(135deg,var(--blue-dark),var(--blue-mid));color:white;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);position:sticky;top:0;z-index:100;}
+.brand{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;}
+.hdr-btns{display:flex;gap:6px;}
+.btn-hdr{background:rgba(255,255,255,0.15);border:none;color:white;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;}
+.btn-hdr:hover{background:rgba(255,255,255,0.25);}
+
+/* TABS */
+#tabs{background:white;border-bottom:2px solid var(--blue-light);display:flex;padding:0 20px;overflow-x:auto;}
+#tabs::-webkit-scrollbar{display:none;}
+.tab{padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-light);border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all 0.2s;}
+.tab:hover{color:var(--blue-mid);}
+.tab.active{color:var(--blue-dark);border-bottom-color:var(--blue-dark);font-weight:700;}
+
+/* CONTENT */
+#content{padding:18px 20px;max-width:1100px;margin:0 auto;}
+.tab-view{display:none;}
+.tab-view.active{display:block;}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;}
+.btn-primary{background:var(--blue-mid);color:white;}
+.btn-primary:hover{background:var(--blue-dark);}
+.btn-success{background:var(--green);color:white;}
+.btn-success:hover{background:#219a52;}
+.btn-secondary{background:var(--gray-light);color:var(--text);}
+.btn-secondary:hover{background:#d5d8dc;}
+.btn-orange{background:var(--orange);color:white;}
+
+/* CARD */
+.card{background:white;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+.card-header{background:var(--blue-pale);border-bottom:2px solid var(--blue-light);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card-title{font-weight:700;font-size:14px;color:var(--blue-dark);}
+.card-body{padding:18px;}
+
+/* FRIDAY BANNER */
+#friday-banner{background:linear-gradient(135deg,var(--orange),#e74c3c);color:white;padding:14px 20px;border-radius:var(--radius);margin-bottom:16px;display:none;align-items:center;justify-content:space-between;gap:12px;box-shadow:var(--shadow);}
+#friday-banner .msg{font-weight:700;font-size:14px;}
+#friday-banner .sub{font-size:12px;opacity:0.85;margin-top:2px;}
+
+/* PROGRESS */
+.progress-wrap{margin:14px 0;}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text-light);margin-bottom:5px;}
+.progress{height:10px;background:var(--gray-light);border-radius:5px;overflow:hidden;}
+.progress-bar{height:100%;background:linear-gradient(to right,var(--blue-mid),var(--green));border-radius:5px;transition:width 0.5s ease;}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:6px;}
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid #e8ecf0;cursor:pointer;transition:all 0.2s;user-select:none;}
+.check-item:hover{background:var(--blue-pale);}
+.check-item.done{background:#f0faf5;border-color:#a9dfbf;opacity:0.75;}
+.check-item.done .check-text{text-decoration:line-through;color:var(--text-light);}
+.check-item.pipeline-action{border-left:3px solid var(--orange);}
+.check-item.pipeline-action.done{border-left-color:var(--green);}
+.check-box{width:20px;height:20px;border:2px solid var(--blue-mid);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all 0.2s;}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:white;}
+.check-time{font-size:11px;font-weight:700;color:var(--blue-mid);min-width:42px;margin-top:2px;}
+.check-item.done .check-time{color:var(--gray);}
+.check-text{font-size:13px;line-height:1.4;}
+.check-tag{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;}
+.tag-strategy{background:var(--blue-pale);color:var(--blue-dark);}
+.tag-pipeline{background:#fef5e7;color:var(--orange);}
+.tag-report{background:#fdf2f8;color:var(--purple);}
+.tag-visit{background:#eafaf1;color:var(--green);}
+.check-empresa{font-size:11px;color:var(--text-light);margin-top:2px;}
+
+/* SECTION DIVIDER */
+.section-sep{margin:14px 0 10px;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.8px;display:flex;align-items:center;gap:8px;}
+.section-sep::after{content:'';flex:1;height:1px;background:var(--gray-light);}
+
+/* REPORT BUTTON AREA */
+#report-btn-area{display:none;background:linear-gradient(135deg,#eafaf1,#d5f5e3);border:2px solid #a9dfbf;border-radius:var(--radius);padding:16px 20px;text-align:center;margin-top:14px;}
+#report-btn-area p{font-size:13px;color:var(--green);font-weight:700;margin-bottom:10px;}
+
+/* WEEK VIEW */
+.week-grid{display:grid;grid-template-columns:60px repeat(5,1fr);gap:1px;background:#e0e6ed;border-radius:var(--radius);overflow:hidden;font-size:12px;}
+.week-header{background:var(--blue-dark);color:white;padding:10px 6px;text-align:center;font-weight:700;font-size:12px;}
+.week-time{background:#f8f9fa;padding:8px 6px;text-align:right;color:var(--text-light);font-size:11px;font-weight:600;border-right:2px solid var(--blue-light);}
+.week-cell{background:white;padding:4px;min-height:50px;vertical-align:top;}
+.week-cell.today-col{background:var(--blue-pale);}
+.week-task{padding:4px 7px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:3px;line-height:1.3;cursor:default;}
+.wt-strategy{background:var(--blue-pale);color:var(--blue-dark);border-left:2px solid var(--blue-mid);}
+.wt-pipeline{background:#fef5e7;color:#b7770d;border-left:2px solid var(--orange);}
+.wt-visit{background:#eafaf1;color:#1e8449;border-left:2px solid var(--green);}
+
+/* CALENDAR */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cal-nav{display:flex;align-items:center;gap:10px;}
+.cal-nav button{background:white;border:1px solid var(--blue-light);color:var(--blue-dark);padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;}
+.cal-nav button:hover{background:var(--blue-pale);}
+.cal-title{font-size:16px;font-weight:700;color:var(--blue-dark);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#d0d7de;border-radius:var(--radius);overflow:hidden;}
+.cal-dow{background:var(--blue-dark);color:white;padding:8px 4px;text-align:center;font-size:11px;font-weight:700;}
+.cal-day{background:white;min-height:70px;padding:5px;cursor:pointer;transition:background 0.15s;}
+.cal-day:hover{background:var(--blue-pale);}
+.cal-day.other-month{background:#f8f9fa;opacity:0.6;}
+.cal-day.today{background:#fff8e1;border:2px solid var(--orange);}
+.cal-day.has-events{position:relative;}
+.cal-daynum{font-size:12px;font-weight:700;color:var(--text-light);margin-bottom:3px;}
+.cal-day.today .cal-daynum{color:var(--orange);font-size:13px;}
+.cal-event{padding:2px 5px;border-radius:3px;font-size:10px;font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ce-strategy{background:var(--blue-pale);color:var(--blue-dark);}
+.ce-pipeline{background:#fef5e7;color:#b7770d;}
+.ce-visit{background:#eafaf1;color:#1e8449);}
+.ce-more{font-size:10px;color:var(--text-light);font-weight:600;}
+
+/* DETAIL PANEL */
+#day-detail{background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-top:12px;display:none;}
+#day-detail-title{font-weight:700;color:var(--blue-dark);margin-bottom:10px;font-size:14px;}
+
+/* INFORMES TAB */
+.report-list{display:flex;flex-direction:column;gap:8px;}
+.report-item{background:white;border:1px solid var(--blue-light);border-radius:6px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.report-item:hover{background:var(--blue-pale);}
+.report-info{flex:1;}
+.report-name{font-weight:700;font-size:13px;color:var(--blue-dark);}
+.report-meta{font-size:11px;color:var(--text-light);margin-top:2px;}
+.report-badge{padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;color:white;}
+.rb-daily{background:var(--blue-mid);}
+.rb-weekly{background:var(--purple);}
+.report-actions{display:flex;gap:6px;}
+.report-btn{padding:5px 12px;border:1px solid;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;background:transparent;}
+.report-btn-view{border-color:var(--blue-mid);color:var(--blue-mid);}
+.report-btn-view:hover{background:var(--blue-pale);}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.stat-card{background:white;border-radius:6px;padding:12px 14px;box-shadow:var(--shadow);border-top:3px solid var(--blue-mid);text-align:center;}
+.stat-val{font-size:24px;font-weight:800;color:var(--blue-dark);}
+.stat-label{font-size:11px;color:var(--text-light);margin-top:3px;}
+
+/* TOAST */
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:#2c3e50;color:white;padding:11px 16px;border-radius:4px;font-size:13px;box-shadow:var(--shadow-lg);animation:toastIn 0.3s ease;max-width:300px;}
+.toast.success{background:var(--green);}
+.toast.info{background:var(--blue-mid);}
+.toast.warning{background:var(--orange);}
+@keyframes toastIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:white;border-radius:var(--radius);box-shadow:var(--shadow-lg);width:100%;max-width:520px;max-height:85vh;overflow-y:auto;}
+.modal-hdr{background:linear-gradient(135deg,var(--blue-dark),var(--blue-mid));color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+.modal-hdr h2{font-size:15px;font-weight:700;}
+.modal-close{background:none;border:none;color:white;font-size:20px;cursor:pointer;}
+.modal-body{padding:20px;}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--gray-light);display:flex;justify-content:flex-end;gap:8px;background:#f8f9fa;}
+
+@media(max-width:700px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .week-grid{font-size:10px;}
+  .week-task{font-size:10px;}
+  #content{padding:12px;}
+  .cal-day{min-height:50px;}
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="brand"><span>⬡</span><span>Agenda Comercial — Ningenia</span></div>
+  <div class="hdr-btns">
+    <button class="btn-hdr" onclick="location.href='pipeline.html'">← Pipeline</button>
+    <button class="btn-hdr" onclick="location.href='informe_pipeline.html'" style="background:rgba(255,255,255,0.2);">📋 Informes</button>
+  </div>
+</div>
+
+<div id="tabs">
+  <div class="tab active" data-tab="hoy" onclick="switchTab('hoy')">📅 Hoy</div>
+  <div class="tab" data-tab="semana" onclick="switchTab('semana')">📆 Semana</div>
+  <div class="tab" data-tab="calendario" onclick="switchTab('calendario')">🗓 Calendario</div>
+  <div class="tab" data-tab="informes" onclick="switchTab('informes')">📁 Informes</div>
+</div>
+
+<div id="content">
+
+<!-- ═══════════════════ TAB HOY ═══════════════════ -->
+<div id="tab-hoy" class="tab-view active">
+
+  <!-- Friday banner -->
+  <div id="friday-banner">
+    <div>
+      <div class="msg">🏁 ¡Es viernes! Hora de revisar la semana</div>
+      <div class="sub">Genera el informe semanal para David Suárez y Roberto García antes de cerrar</div>
+    </div>
+    <button class="btn btn-success" onclick="generateWeeklyReport()">Generar informe semanal →</button>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row" id="today-stats"></div>
+
+  <!-- Daily checklist card -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title" id="today-title">📅 Checklist del día</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:2px;" id="today-subtitle"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="check-counter" style="font-size:12px;font-weight:700;color:var(--blue-mid);"></span>
+        <button class="btn btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="resetDay()">Reiniciar</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Progreso del día</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+      </div>
+      <div class="checklist" id="checklist"></div>
+      <div id="report-btn-area">
+        <p>🎉 ¡Día completado! Genera el informe diario ahora</p>
+        <button class="btn btn-success" onclick="generateDailyReport()">📄 Generar Informe Diario</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ TAB SEMANA ═══════════════════ -->
+<div id="tab-semana" class="tab-view">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📆 Plan de la Semana</div>
+      <div style="font-size:12px;color:var(--text-light);" id="week-range"></div>
+    </div>
+    <div class="card-body" style="padding:12px;overflow-x:auto;">
+      <div class="week-grid" id="week-grid"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;font-size:12px;color:var(--text-light);padding:0 4px;">
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:var(--blue-pale);border-left:2px solid var(--blue-mid);display:inline-block;border-radius:2px;"></span>Tarea estratégica</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fef5e7;border-left:2px solid var(--orange);display:inline-block;border-radius:2px;"></span>Acción pipeline</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#eafaf1;border-left:2px solid var(--green);display:inline-block;border-radius:2px;"></span>Visita / Demo</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB CALENDARIO ═══════════════════ -->
+<div id="tab-calendario" class="tab-view">
+  <div class="card">
+    <div class="card-header">
+      <div class="cal-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <div class="cal-title" id="cal-title"></div>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+      <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;" onclick="goToday()">Hoy</button>
+    </div>
+    <div class="card-body" style="padding:12px;">
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+  <div id="day-detail">
+    <div id="day-detail-title"></div>
+    <div id="day-detail-body"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB INFORMES ═══════════════════ -->
+<div id="tab-informes" class="tab-view">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div style="font-size:15px;font-weight:700;color:var(--blue-dark);">Histórico de Informes</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="generateDailyReport()">+ Informe Diario</button>
+      <button class="btn btn-orange" onclick="generateWeeklyReport()">+ Informe Semanal</button>
+    </div>
+  </div>
+  <div id="reports-list" class="report-list">
+    <div style="text-align:center;padding:40px;color:var(--text-light);">
+      <div style="font-size:36px;margin-bottom:10px;">📁</div>
+      <p>Sin informes guardados todavía.<br>Completa el checklist diario o genera un informe manualmente.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- end content -->
+
+<!-- MODAL DAILY REPORT PREVIEW -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-hdr">
+      <h2 id="report-modal-title">Informe</h2>
+      <button class="modal-close" onclick="closeModal('report-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="report-modal-body" style="font-size:13px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('report-modal')">Cerrar</button>
+      <button class="btn btn-success" onclick="downloadCurrentReport()">⬇ Descardar HTML</button>
+      <button class="btn btn-primary" onclick="saveAndDownloadReport()">💾 Guardar en Firebase</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════
+const LS_CFG  = 'ningenia_firebase_cfg';
+const LS_DATA = 'ningenia_pipeline_data';
+const LS_CHECKS = 'ningenia_checks_';
+const LS_REPORTS = 'ningenia_reports';
+const OBJETIVO = 350000;
+
+// Daily strategy tasks (by weekday 1=Mon..5=Fri)
+const STRATEGY_TASKS = {
+  1: [ // LUNES
+    {time:'09:00', text:'Revisar pipeline: priorizar oportunidades y acciones del día', tag:'strategy'},
+    {time:'09:20', text:'LinkedIn: conectar con 5 decisores nuevos + enviar mensajes de valor', tag:'strategy'},
+    {time:'10:00', text:'Bloque prospección fría: 6 llamadas a nuevas empresas de la lista SABI', tag:'strategy'},
+    {time:'11:30', text:'Follow-up: contactar oportunidades en etapa "Contacto" (sin respuesta +5 días)', tag:'strategy'},
+    {time:'12:00', text:'Preparar/revisar propuestas en curso o pendientes de envío', tag:'strategy'},
+    {time:'16:00', text:'Bloque prospección fría: 6 llamadas adicionales', tag:'strategy'},
+    {time:'17:00', text:'Actualizar pipeline con resultados del día', tag:'strategy'},
+    {time:'17:20', text:'Planificar acciones para mañana', tag:'strategy'},
+  ],
+  2: [ // MARTES
+    {time:'09:00', text:'Revisar pipeline y priorizar', tag:'strategy'},
+    {time:'09:15', text:'Bloque seguimiento: llamar a cualificados y propuestas enviadas', tag:'strategy'},
+    {time:'10:30', text:'LinkedIn: responder mensajes + publicar contenido de valor (automatización)', tag:'strategy'},
+    {time:'11:00', text:'Bloque prospección fría: 6 llamadas nuevas', tag:'strategy'},
+    {time:'12:00', text:'Preparar presentación/demo para visitas programadas', tag:'strategy'},
+    {time:'16:00', text:'Bloque prospección fría: 6 llamadas adicionales', tag:'strategy'},
+    {time:'17:00', text:'Actualizar pipeline con resultados', tag:'strategy'},
+  ],
+  3: [ // MIÉRCOLES
+    {time:'09:00', text:'Revisar pipeline y priorizar', tag:'strategy'},
+    {time:'09:15', text:'Envío de propuestas listas + seguimiento de las ya enviadas (+7 días)', tag:'strategy'},
+    {time:'10:00', text:'Bloque negociación: llamar a oportunidades en etapa negociación', tag:'strategy'},
+    {time:'11:00', text:'Bloque prospección fría: 6 llamadas nuevas', tag:'strategy'},
+    {time:'12:00', text:'LinkedIn: networking y prospección digital (5 mensajes personalizados)', tag:'strategy'},
+    {time:'16:00', text:'Bloque prospección fría: 6 llamadas adicionales', tag:'strategy'},
+    {time:'17:00', text:'Actualizar pipeline y confirmar visitas de la semana', tag:'strategy'},
+  ],
+  4: [ // JUEVES
+    {time:'09:00', text:'Revisar pipeline y priorizar', tag:'strategy'},
+    {time:'09:15', text:'Bloque prospección fría: 6 llamadas nuevas', tag:'strategy'},
+    {time:'10:30', text:'Follow-up: propuestas enviadas hace más de 5 días sin respuesta', tag:'strategy'},
+    {time:'11:30', text:'Preparar visitas y demos de la semana siguiente', tag:'strategy'},
+    {time:'12:00', text:'LinkedIn: conectar con 5 decisores + seguimiento de contactos previos', tag:'strategy'},
+    {time:'16:00', text:'Bloque prospección fría: 6 llamadas adicionales', tag:'strategy'},
+    {time:'17:00', text:'Actualizar pipeline con resultados del día', tag:'strategy'},
+  ],
+  5: [ // VIERNES
+    {time:'09:00', text:'Revisar KPIs de la semana vs objetivo (350.000€ anual)', tag:'strategy'},
+    {time:'09:30', text:'Bloque cierre/negociación: llamar a oportunidades en fase final', tag:'strategy'},
+    {time:'10:30', text:'Bloque prospección fría: 6 llamadas nuevas', tag:'strategy'},
+    {time:'11:30', text:'Actualizar todas las oportunidades del pipeline', tag:'strategy'},
+    {time:'12:00', text:'Generar y enviar informe semanal a David Suárez y Roberto García', tag:'report'},
+    {time:'12:30', text:'Planificar visitas y acciones clave de la semana siguiente', tag:'strategy'},
+    {time:'16:00', text:'Bloque prospección fría: 4 llamadas adicionales', tag:'strategy'},
+    {time:'17:00', text:'Cierre de semana: pipeline actualizado y agenda lista para el lunes', tag:'strategy'},
+  ],
+};
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let pipelineData = [];
+let calMonth, calYear;
+let currentReportHtml = '';
+let currentReportType = '';
+let currentReportDate = '';
+let firebaseDb = null;
+let reports = [];
+
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS_ES   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DAYS_FULL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+// ══════════════════════════════════════
+// FIREBASE / LOCAL
+// ══════════════════════════════════════
+async function initFirebase() {
+  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
+  if (cfg && cfg.apiKey) {
+    try {
+      const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+      const { getFirestore, collection, getDocs, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
+      const app = getApps().find(a=>a.name==='agenda') || initializeApp(cfg,'agenda');
+      const db = getFirestore(app);
+      firebaseDb = { db, collection, getDocs, addDoc, serverTimestamp };
+      // Load pipeline data
+      const snap = await getDocs(collection(db, 'oportunidades'));
+      pipelineData = snap.docs.map(d => ({id:d.id,...d.data()}));
+      // Load reports
+      const rSnap = await getDocs(collection(db, 'informes'));
+      reports = rSnap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+    } catch(e) {
+      console.error(e);
+      loadLocal();
+    }
+  } else {
+    loadLocal();
+  }
+  init();
+}
+
+function loadLocal() {
+  pipelineData = JSON.parse(localStorage.getItem(LS_DATA) || '[]');
+  reports = JSON.parse(localStorage.getItem(LS_REPORTS) || '[]').sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+function init() {
+  const now = new Date();
+  calMonth = now.getMonth();
+  calYear  = now.getFullYear();
+  renderToday();
+  renderWeek();
+  renderCalendar();
+  renderReports();
+  checkFriday();
+}
+
+// ══════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-view').forEach(v => v.classList.toggle('active', v.id === 'tab-' + tab));
+}
+
+// ══════════════════════════════════════
+// TODAY TAB
+// ══════════════════════════════════════
+function renderToday() {
+  const now     = new Date();
+  const dow     = now.getDay(); // 0=sun
+  const todayStr = fmt(now);
+  const dayName  = DAYS_FULL[dow];
+  const dateStr  = now.getDate() + ' de ' + MONTHS_ES[now.getMonth()] + ' de ' + now.getFullYear();
+
+  document.getElementById('today-title').textContent = `📅 ${dayName} — ${dateStr}`;
+
+  // Get strategy tasks for today
+  const stratTasks = STRATEGY_TASKS[dow] || [];
+  // Get pipeline actions due today
+  const pipelineActions = pipelineData.filter(o =>
+    !['cerrado','descartado'].includes(o.etapa) && o.fechaAccion === todayStr && o.proximaAccion
+  );
+
+  // Build combined task list
+  const allTasks = [
+    ...stratTasks.map((t,i) => ({id:'s_'+i, ...t})),
+    ...pipelineActions.map(o => ({
+      id:'p_'+o.id, time:'',
+      text: o.proximaAccion,
+      tag:'pipeline',
+      empresa: o.empresa,
+      etapa: o.etapa
+    }))
+  ];
+
+  if (allTasks.length === 0) {
+    document.getElementById('checklist').innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-light);">
+      <div style="font-size:32px;margin-bottom:8px;">🎉</div>
+      <p>No hay tareas hoy. ¡Descansa o adelanta prospección!</p>
+    </div>`;
+    return;
+  }
+
+  const checkKey = LS_CHECKS + todayStr;
+  const checked  = JSON.parse(localStorage.getItem(checkKey) || '[]');
+
+  // Stats
+  const active  = pipelineData.filter(o => !['cerrado','descartado'].includes(o.etapa));
+  const closed  = pipelineData.filter(o => o.etapa === 'cerrado');
+  const closedVal = closed.reduce((s,o) => s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0), 0);
+  const overdue = active.filter(o => o.fechaAccion && o.fechaAccion < todayStr);
+  document.getElementById('today-stats').innerHTML = [
+    {val: active.length,         label:'Activas en pipeline', color:'var(--blue-mid)'},
+    {val: '€'+fmtN(closedVal),   label:'Facturado', color:'var(--green)'},
+    {val: pipelineActions.length,label:'Acciones hoy', color:'var(--orange)'},
+    {val: overdue.length,        label:'Vencidas', color: overdue.length>0?'var(--red)':'var(--gray)'},
+  ].map(s => `<div class="stat-card" style="border-top-color:${s.color}">
+    <div class="stat-val" style="color:${s.color}">${s.val}</div>
+    <div class="stat-label">${s.label}</div>
+  </div>`).join('');
+
+  // Render checklist
+  let html = '';
+  if (pipelineActions.length > 0) {
+    html += `<div class="section-sep">Acciones del pipeline para hoy</div>`;
+    pipelineActions.forEach((o,i) => {
+      const id = 'p_'+o.id;
+      const done = checked.includes(id);
+      html += checkItemHtml(id, '', o.proximaAccion, 'pipeline', done, o.empresa);
+    });
+    html += `<div class="section-sep">Tareas estratégicas del día</div>`;
+  }
+  stratTasks.forEach((t,i) => {
+    const id = 's_'+i;
+    const done = checked.includes(id);
+    html += checkItemHtml(id, t.time, t.text, t.tag, done, '');
+  });
+
+  document.getElementById('checklist').innerHTML = html;
+  updateProgress(allTasks.length, checked.length);
+  document.getElementById('today-subtitle').textContent =
+    `${pipelineActions.length} acción${pipelineActions.length!==1?'es':''} del pipeline · ${stratTasks.length} tareas estratégicas`;
+}
+
+function checkItemHtml(id, time, text, tag, done, empresa) {
+  const tagLabels = {strategy:'Estrategia', pipeline:'Pipeline', report:'Informe', visit:'Visita'};
+  return `<div class="check-item ${done?'done':''} ${tag==='pipeline'?'pipeline-action':''}" onclick="toggleCheck('${id}')">
+    <div class="check-box">${done?'✓':''}</div>
+    ${time ? `<div class="check-time">${time}</div>` : '<div class="check-time" style="color:transparent;">--:--</div>'}
+    <div style="flex:1">
+      <div class="check-text">${esc(text)}<span class="check-tag tag-${tag}">${tagLabels[tag]||tag}</span></div>
+      ${empresa ? `<div class="check-empresa">📌 ${esc(empresa)}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleCheck(id) {
+  const todayStr = fmt(new Date());
+  const key = LS_CHECKS + todayStr;
+  const checked = JSON.parse(localStorage.getItem(key) || '[]');
+  const idx = checked.indexOf(id);
+  if (idx >= 0) checked.splice(idx, 1);
+  else checked.push(id);
+  localStorage.setItem(key, JSON.stringify(checked));
+
+  // Count total tasks
+  const dow = new Date().getDay();
+  const stratTasks = STRATEGY_TASKS[dow] || [];
+  const pipelineActions = pipelineData.filter(o =>
+    !['cerrado','descartado'].includes(o.etapa) && o.fechaAccion === todayStr && o.proximaAccion
+  );
+  const total = stratTasks.length + pipelineActions.length;
+
+  updateProgress(total, checked.length);
+  renderToday();
+}
+
+function updateProgress(total, done) {
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('check-counter').textContent = done + '/' + total + ' tareas';
+  const btnArea = document.getElementById('report-btn-area');
+  if (btnArea) btnArea.style.display = pct >= 80 ? 'block' : 'none';
+}
+
+function resetDay() {
+  if (!confirm('¿Reiniciar checklist del día?')) return;
+  localStorage.removeItem(LS_CHECKS + fmt(new Date()));
+  renderToday();
+}
+
+function checkFriday() {
+  const dow = new Date().getDay();
+  const banner = document.getElementById('friday-banner');
+  if (banner) banner.style.display = dow === 5 ? 'flex' : 'none';
+}
+
+// ══════════════════════════════════════
+// WEEK VIEW
+// ══════════════════════════════════════
+function renderWeek() {
+  const now   = new Date();
+  const dow   = now.getDay() === 0 ? 7 : now.getDay();
+  const mon   = new Date(now); mon.setDate(now.getDate() - dow + 1);
+  const todayStr = fmt(now);
+
+  const days = Array.from({length:5}, (_,i) => {
+    const d = new Date(mon); d.setDate(mon.getDate()+i);
+    return d;
+  });
+
+  document.getElementById('week-range').textContent =
+    days[0].getDate() + ' — ' + days[4].getDate() + ' de ' + MONTHS_ES[now.getMonth()];
+
+  const times = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','16:00','17:00'];
+  const dayNames = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+
+  let html = `<div class="week-header" style="background:#2c3e50;">Hora</div>`;
+  days.forEach((d,i) => {
+    const isToday = fmt(d) === todayStr;
+    html += `<div class="week-header" style="${isToday?'background:var(--orange);':''}">${dayNames[i]}<br><span style="font-size:10px;opacity:0.8;">${d.getDate()}/${d.getMonth()+1}</span></div>`;
+  });
+
+  times.forEach(time => {
+    html += `<div class="week-time">${time}</div>`;
+    days.forEach((d,i) => {
+      const dayNum = i+1;
+      const isToday = fmt(d) === todayStr;
+      const tasks = (STRATEGY_TASKS[dayNum]||[]).filter(t => t.time === time);
+      // Pipeline actions for this day
+      const dStr = fmt(d);
+      const pActions = pipelineData.filter(o =>
+        !['cerrado','descartado'].includes(o.etapa) && o.fechaAccion === dStr
+      );
+
+      html += `<div class="week-cell ${isToday?'today-col':''}">`;
+      tasks.forEach(t => {
+        const icon = t.tag==='report'?'📋':t.tag==='visit'?'🏭':'📞';
+        html += `<div class="week-task wt-strategy" title="${esc(t.text)}">${icon} ${esc(t.text.substring(0,35))}${t.text.length>35?'…':''}</div>`;
+      });
+      if (time === '09:00') {
+        pActions.forEach(o => {
+          html += `<div class="week-task wt-pipeline" title="${esc(o.empresa)}: ${esc(o.proximaAccion||'')}">📌 ${esc(o.empresa.substring(0,20))}</div>`;
+        });
+      }
+      html += `</div>`;
+    });
+  });
+
+  document.getElementById('week-grid').innerHTML = html;
+}
+
+// ══════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════
+function renderCalendar() {
+  const title = document.getElementById('cal-title');
+  title.textContent = MONTHS_ES[calMonth] + ' ' + calYear;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+  const todayStr = fmt(new Date());
+
+  // Build events map from pipeline
+  const eventsMap = {};
+  pipelineData.forEach(o => {
+    if (o.fechaAccion && !['cerrado','descartado'].includes(o.etapa)) {
+      const d = o.fechaAccion;
+      if (!eventsMap[d]) eventsMap[d] = [];
+      eventsMap[d].push({type:'pipeline', label: o.empresa, detail: o.proximaAccion});
+    }
+    if (o.etapa === 'visita' && o.fechaAccion) {
+      const d = o.fechaAccion;
+      if (eventsMap[d]) eventsMap[d].forEach(e => { if(e.label===o.empresa) e.type='visit'; });
+    }
+  });
+
+  // Header
+  let html = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d =>
+    `<div class="cal-dow">${d}</div>`
+  ).join('');
+
+  const startOffset = (firstDay === 0 ? 6 : firstDay - 1);
+
+  for (let i = 0; i < startOffset; i++) {
+    const d = daysInPrev - startOffset + i + 1;
+    html += `<div class="cal-day other-month"><div class="cal-daynum">${d}</div></div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isToday = dateStr === todayStr;
+    const events  = eventsMap[dateStr] || [];
+    html += `<div class="cal-day ${isToday?'today':''} ${events.length?'has-events':''}" onclick="showDayDetail('${dateStr}')">
+      <div class="cal-daynum">${d}</div>
+      ${events.slice(0,2).map(e => `<div class="cal-event ce-${e.type}">${esc(e.label.substring(0,16))}</div>`).join('')}
+      ${events.length > 2 ? `<div class="ce-more">+${events.length-2} más</div>` : ''}
+    </div>`;
+  }
+
+  const total = startOffset + daysInMonth;
+  const remaining = (7 - (total % 7)) % 7;
+  for (let d = 1; d <= remaining; d++) {
+    html += `<div class="cal-day other-month"><div class="cal-daynum">${d}</div></div>`;
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+function goToday() {
+  const now = new Date();
+  calMonth = now.getMonth();
+  calYear  = now.getFullYear();
+  renderCalendar();
+}
+
+function showDayDetail(dateStr) {
+  const panel = document.getElementById('day-detail');
+  const titleEl = document.getElementById('day-detail-title');
+  const bodyEl  = document.getElementById('day-detail-body');
+
+  const d = new Date(dateStr + 'T12:00:00');
+  titleEl.textContent = DAYS_FULL[d.getDay()] + ', ' + d.getDate() + ' de ' + MONTHS_ES[d.getMonth()] + ' ' + d.getFullYear();
+
+  const opps = pipelineData.filter(o => o.fechaAccion === dateStr && !['cerrado','descartado'].includes(o.etapa));
+  const dow  = d.getDay();
+  const stratTasks = STRATEGY_TASKS[dow] || [];
+
+  let html = '';
+  if (opps.length > 0) {
+    html += '<div class="section-sep">Acciones del pipeline</div>';
+    opps.forEach(o => {
+      html += `<div class="check-item pipeline-action" style="cursor:default;">
+        <span style="font-size:18px;">📌</span>
+        <div><div class="check-text"><strong>${esc(o.empresa)}</strong> — ${esc(o.proximaAccion||'Sin descripción')}</div>
+        <div class="check-empresa">${esc(o.etapa)} · ${esc(o.comercial||'')}</div></div>
+      </div>`;
+    });
+  }
+  if (stratTasks.length > 0) {
+    html += '<div class="section-sep">Tareas estratégicas</div>';
+    stratTasks.forEach(t => {
+      html += `<div class="check-item" style="cursor:default;">
+        <div class="check-time">${t.time}</div>
+        <div class="check-text">${esc(t.text)}</div>
+      </div>`;
+    });
+  }
+  if (!html) html = '<p style="color:var(--text-light);font-size:13px;padding:10px;">Sin eventos este día.</p>';
+
+  bodyEl.innerHTML = html;
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ══════════════════════════════════════
+// REPORTS LIST
+// ══════════════════════════════════════
+function renderReports() {
+  const el = document.getElementById('reports-list');
+  if (!reports.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-light);">
+      <div style="font-size:36px;margin-bottom:10px;">📁</div>
+      <p>Sin informes guardados todavía.</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = reports.map(r => `
+    <div class="report-item">
+      <div class="report-info">
+        <div class="report-name">${r.titulo || 'Informe'}</div>
+        <div class="report-meta">${fmtDisplay(r.fecha)} · ${r.tareas||''}</div>
+      </div>
+      <span class="report-badge ${r.tipo==='semanal'?'rb-weekly':'rb-daily'}">${r.tipo==='semanal'?'Semanal':'Diario'}</span>
+      <div class="report-actions">
+        <button class="report-btn report-btn-view" onclick="viewReport('${r.id}')">Ver</button>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function viewReport(id) {
+  const r = reports.find(x => x.id === id);
+  if (!r) return;
+  currentReportHtml = r.html || '';
+  currentReportType = r.tipo;
+  currentReportDate = r.fecha;
+  document.getElementById('report-modal-title').textContent = r.titulo || 'Informe';
+  document.getElementById('report-modal-body').innerHTML = r.html || '<p>Sin contenido.</p>';
+  openModal('report-modal');
+}
+
+// ══════════════════════════════════════
+// GENERATE DAILY REPORT
+// ══════════════════════════════════════
+function generateDailyReport() {
+  const now = new Date();
+  const todayStr = fmt(now);
+  const dow = now.getDay();
+  const stratTasks = STRATEGY_TASKS[dow] || [];
+  const pipelineActions = pipelineData.filter(o =>
+    !['cerrado','descartado'].includes(o.etapa) && o.fechaAccion === todayStr
+  );
+  const checked = JSON.parse(localStorage.getItem(LS_CHECKS + todayStr) || '[]');
+  const totalTasks = stratTasks.length + pipelineActions.length;
+  const doneTasks  = checked.length;
+  const pct = totalTasks > 0 ? Math.round(doneTasks/totalTasks*100) : 0;
+
+  const active = pipelineData.filter(o => !['cerrado','descartado'].includes(o.etapa));
+  const closed = pipelineData.filter(o => o.etapa === 'cerrado');
+  const closedVal = closed.reduce((s,o)=>s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0),0);
+  const pipelineW = active.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0)*(STAGE_PROB[o.etapa]||0),0);
+  const overdue = active.filter(o => o.fechaAccion && o.fechaAccion < todayStr);
+
+  const dateLabel = DAYS_FULL[dow] + ', ' + now.getDate() + ' de ' + MONTHS_ES[now.getMonth()] + ' de ' + now.getFullYear();
+
+  const html = `<div style="font-family:Arial,sans-serif;color:#1a1a2e;">
+<div style="background:linear-gradient(135deg,#1F4E79,#2E75B6);color:white;padding:28px 32px;border-radius:8px 8px 0 0;">
+  <div style="font-size:11px;letter-spacing:2px;opacity:0.7;margin-bottom:8px;">INFORME DIARIO · NINGENIA</div>
+  <div style="font-size:22px;font-weight:800;margin-bottom:4px;">${dateLabel}</div>
+  <div style="font-size:13px;opacity:0.8;">Comercial: David · Pipeline actualizado a ${fmtTime(now)}</div>
+</div>
+<div style="padding:24px 32px;background:white;">
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
+  ${[
+    {label:'Tareas completadas', val:`${doneTasks}/${totalTasks} (${pct}%)`, color:'#2E75B6'},
+    {label:'Facturado acumulado', val:'€'+fmtN(closedVal), color:'#27ae60'},
+    {label:'Pipeline ponderado', val:'€'+fmtN(pipelineW), color:'#1F4E79'},
+    {label:'Acciones vencidas', val:overdue.length, color:overdue.length>0?'#e74c3c':'#27ae60'},
+  ].map(k=>`<div style="background:#EBF4FA;padding:14px;border-radius:6px;border-top:3px solid ${k.color};">
+    <div style="font-size:10px;font-weight:700;color:#7f8c8d;margin-bottom:5px;">${k.label.toUpperCase()}</div>
+    <div style="font-size:20px;font-weight:800;color:${k.color};">${k.val}</div>
+  </div>`).join('')}
+</div>
+
+<h3 style="color:#1F4E79;border-bottom:2px solid #D5E8F0;padding-bottom:8px;margin-bottom:14px;font-size:14px;">✅ Tareas del día</h3>
+<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">
+  <tr style="background:#1F4E79;color:white;">
+    <th style="padding:8px 10px;text-align:left;">Hora</th>
+    <th style="padding:8px 10px;text-align:left;">Tarea</th>
+    <th style="padding:8px 10px;text-align:center;">Estado</th>
+  </tr>
+  ${stratTasks.map((t,i)=>{
+    const done = checked.includes('s_'+i);
+    return `<tr style="border-bottom:1px solid #e8ecf0;${done?'background:#f0faf5;':''}">
+      <td style="padding:7px 10px;color:#7f8c8d;font-weight:700;">${t.time}</td>
+      <td style="padding:7px 10px;${done?'text-decoration:line-through;color:#95a5a6;':''}">${esc(t.text)}</td>
+      <td style="padding:7px 10px;text-align:center;">${done?'✅':'⬜'}</td>
+    </tr>`;
+  }).join('')}
+  ${pipelineActions.map(o=>{
+    const done = checked.includes('p_'+o.id);
+    return `<tr style="border-bottom:1px solid #e8ecf0;border-left:3px solid #e67e22;${done?'background:#f0faf5;':''}">
+      <td style="padding:7px 10px;color:#e67e22;font-weight:700;">Pipeline</td>
+      <td style="padding:7px 10px;${done?'text-decoration:line-through;color:#95a5a6;'';}"><strong>${esc(o.empresa)}</strong> — ${esc(o.proximaAccion||'')}</td>
+      <td style="padding:7px 10px;text-align:center;">${done?'✅':'⬜'}</td>
+    </tr>`;
+  }).join('')}
+</table>
+
+${overdue.length>0?`<div style="background:#fdedec;border:1px solid #f5b7b1;border-left:4px solid #e74c3c;border-radius:6px;padding:12px 16px;margin-bottom:16px;">
+  <strong style="color:#c0392b;">⚠ Acciones vencidas (${overdue.length})</strong>
+  <ul style="margin-top:8px;padding-left:20px;font-size:12px;">
+    ${overdue.map(o=>`<li>${esc(o.empresa)} — ${esc(o.proximaAccion||'')} · Vencía: ${fmtDisplay(o.fechaAccion)}</li>`).join('')}
+  </ul>
+</div>`:''}
+
+</div>
+<div style="background:#1F4E79;color:rgba(255,255,255,0.7);padding:14px 32px;display:flex;justify-content:space-between;font-size:11px;border-radius:0 0 8px 8px;">
+  <span>⬡ <strong style="color:white;">Ningenia</strong> — Informe Diario Comercial</span>
+  <span>${dateLabel}</span>
+</div>
+</div>`;
+
+  currentReportHtml = html;
+  currentReportType = 'diario';
+  currentReportDate = todayStr;
+
+  const titulo = `Informe Diario — ${dateLabel}`;
+  document.getElementById('report-modal-title').textContent = titulo;
+  document.getElementById('report-modal-body').innerHTML = html;
+  openModal('report-modal');
+}
+
+// ══════════════════════════════════════
+// GENERATE WEEKLY REPORT
+// ══════════════════════════════════════
+function generateWeeklyReport() {
+  const now = new Date();
+  const dow = now.getDay() === 0 ? 7 : now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate() - dow + 1);
+  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+
+  const active = pipelineData.filter(o => !['cerrado','descartado'].includes(o.etapa));
+  const closed = pipelineData.filter(o => o.etapa === 'cerrado');
+  const closedVal = closed.reduce((s,o)=>s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0),0);
+  const pipelineW = active.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0)*(STAGE_PROB[o.etapa]||0),0);
+  const pct = Math.min(Math.round(closedVal/OBJETIVO*100),100);
+  const todayStr = fmt(now);
+  const overdue = active.filter(o => o.fechaAccion && o.fechaAccion < todayStr);
+
+  const monStr = mon.getDate() + ' de ' + MONTHS_ES[mon.getMonth()];
+  const friStr = fri.getDate() + ' de ' + MONTHS_ES[fri.getMonth()] + ' de ' + fri.getFullYear();
+  const weekLabel = monStr + ' — ' + friStr;
+
+  const html = `<div style="font-family:Arial,sans-serif;color:#1a1a2e;">
+<div style="background:linear-gradient(135deg,#1F4E79,#2E75B6);color:white;padding:32px 36px;">
+  <div style="font-size:11px;letter-spacing:2px;opacity:0.7;margin-bottom:10px;">INFORME SEMANAL · NINGENIA</div>
+  <div style="font-size:26px;font-weight:800;margin-bottom:6px;">Informe de Seguimiento Semanal</div>
+  <div style="font-size:14px;opacity:0.85;">Semana del ${weekLabel}</div>
+  <div style="font-size:13px;opacity:0.7;margin-top:6px;">Para: David Suárez &amp; Roberto García (Ningenia)</div>
+</div>
+<div style="padding:28px 36px;background:white;">
+
+<h3 style="color:#1F4E79;border-bottom:2px solid #D5E8F0;padding-bottom:8px;margin-bottom:16px;">📌 Resumen Ejecutivo</h3>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;">
+  ${[
+    {label:'Objetivo anual', val:pct+'%', sub:'€'+fmtN(closedVal)+' de €'+fmtN(OBJETIVO), color:'#27ae60'},
+    {label:'Pipeline ponderado', val:'€'+fmtN(pipelineW), sub:'Valor ajustado por probabilidad', color:'#1F4E79'},
+    {label:'Oportunidades activas', val:active.length, sub:'En las 6 etapas del pipeline', color:'#2E75B6'},
+  ].map(k=>`<div style="background:#EBF4FA;padding:16px;border-radius:6px;border-top:3px solid ${k.color};">
+    <div style="font-size:10px;font-weight:700;color:#7f8c8d;margin-bottom:6px;">${k.label.toUpperCase()}</div>
+    <div style="font-size:26px;font-weight:800;color:${k.color};margin-bottom:4px;">${k.val}</div>
+    <div style="font-size:11px;color:#7f8c8d;">${k.sub}</div>
+  </div>`).join('')}
+</div>
+
+<div style="height:10px;background:#e8ecf0;border-radius:5px;margin-bottom:24px;">
+  <div style="height:100%;width:${pct}%;background:linear-gradient(to right,#2E75B6,#27ae60);border-radius:5px;"></div>
+</div>
+
+<h3 style="color:#1F4E79;border-bottom:2px solid #D5E8F0;padding-bottom:8px;margin-bottom:14px;">🔵 Estado del Pipeline</h3>
+<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:24px;">
+  <tr style="background:#1F4E79;color:white;">
+    <th style="padding:9px 12px;text-align:left;">Etapa</th>
+    <th style="padding:9px 12px;">Nº</th>
+    <th style="padding:9px 12px;">Valor</th>
+    <th style="padding:9px 12px;">Ponderado</th>
+  </tr>
+  ${[
+    {id:'prospecto',   label:'Prospecto',        prob:0.05, color:'#95a5a6'},
+    {id:'contacto',    label:'Contacto',          prob:0.10, color:'#3498db'},
+    {id:'cualificado', label:'Cualificado',       prob:0.25, color:'#2980b9'},
+    {id:'visita',      label:'Visita/Demo',       prob:0.40, color:'#e67e22'},
+    {id:'propuesta',   label:'Propuesta Enviada', prob:0.65, color:'#c0392b'},
+    {id:'negociacion', label:'Negociación',       prob:0.85, color:'#27ae60'},
+  ].map(st=>{
+    const opps = active.filter(o=>o.etapa===st.id);
+    const val  = opps.reduce((s,o)=>s+(parseFloat(o.ticketEstimado)||0),0);
+    return `<tr style="border-bottom:1px solid #e8ecf0;">
+      <td style="padding:8px 12px;"><span style="background:${st.color};color:white;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;">${st.label}</span></td>
+      <td style="padding:8px 12px;text-align:center;">${opps.length}</td>
+      <td style="padding:8px 12px;text-align:center;">€${fmtN(val)}</td>
+      <td style="padding:8px 12px;text-align:center;font-weight:700;">€${fmtN(val*st.prob)}</td>
+    </tr>`;
+  }).join('')}
+</table>
+
+${overdue.length>0?`<div style="background:#fdedec;border:1px solid #f5b7b1;border-left:4px solid #e74c3c;border-radius:6px;padding:14px 18px;margin-bottom:20px;">
+  <strong style="color:#c0392b;font-size:13px;">⚠ Acciones vencidas (${overdue.length}) — Requieren atención</strong>
+  <ul style="margin-top:10px;padding-left:20px;font-size:12px;line-height:1.9;">
+    ${overdue.map(o=>`<li><strong>${esc(o.empresa)}</strong> — ${esc(o.proximaAccion||'')} · Vencía: ${fmtDisplay(o.fechaAccion)}</li>`).join('')}
+  </ul>
+</div>`:''}
+
+<h3 style="color:#1F4E79;border-bottom:2px solid #D5E8F0;padding-bottom:8px;margin-bottom:14px;">📋 Plan Semana Siguiente</h3>
+<ul style="font-size:12px;line-height:2;padding-left:20px;">
+  <li>Continuar prospección: mínimo 12 llamadas/día (60 semanales)</li>
+  <li>Objetivo visitas: 2-3 demos o visitas concertadas</li>
+  <li>Propuestas: enviar/seguir mínimo 2 propuestas activas</li>
+  <li>LinkedIn: 25 nuevas conexiones con decisores del sector alimentario</li>
+  <li>Pipeline ponderado objetivo: €${fmtN(Math.max(pipelineW*1.1, OBJETIVO*0.3))}</li>
+</ul>
+</div>
+<div style="background:#1F4E79;color:rgba(255,255,255,0.7);padding:16px 36px;display:flex;justify-content:space-between;font-size:11px;">
+  <span>⬡ <strong style="color:white;">Ningenia</strong> — Informe Semanal Comercial</span>
+  <span>Semana: ${weekLabel}</span>
+</div>
+</div>`;
+
+  currentReportHtml = html;
+  currentReportType = 'semanal';
+  currentReportDate = fmt(now);
+
+  document.getElementById('report-modal-title').textContent = 'Informe Semanal — ' + weekLabel;
+  document.getElementById('report-modal-body').innerHTML = html;
+  openModal('report-modal');
+}
+
+const STAGE_PROB = {prospecto:0.05,contacto:0.10,cualificado:0.25,visita:0.40,propuesta:0.65,negociacion:0.85,cerrado:1,descartado:0};
+
+// ══════════════════════════════════════
+// SAVE & DOWNLOAD REPORT
+// ══════════════════════════════════════
+async function saveAndDownloadReport() {
+  downloadCurrentReport();
+  const titulo = document.getElementById('report-modal-title').textContent;
+  const report = {
+    id: 'rpt_'+Date.now(),
+    tipo: currentReportType,
+    titulo,
+    fecha: currentReportDate,
+    html: currentReportHtml,
+    createdAt: new Date().toISOString()
+  };
+  if (firebaseDb) {
+    try {
+      const { addDoc, collection, serverTimestamp } = firebaseDb;
+      await addDoc(collection(firebaseDb.db, 'informes'), {...report, savedAt: serverTimestamp()});
+      reports.unshift(report);
+      toast('Informe guardado en Firebase ☁', 'success');
+    } catch(e) { saveReportLocal(report); }
+  } else {
+    saveReportLocal(report);
+  }
+  renderReports();
+  closeModal('report-modal');
+}
+
+function saveReportLocal(report) {
+  const saved = JSON.parse(localStorage.getItem(LS_REPORTS)||'[]');
+  saved.unshift(report);
+  localStorage.setItem(LS_REPORTS, JSON.stringify(saved));
+  reports = saved;
+  toast('Informe guardado localmente', 'success');
+}
+
+function downloadCurrentReport() {
+  const titulo = document.getElementById('report-modal-title').textContent;
+  const fullHtml = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${esc(titulo)}</title>
+<style>body{margin:0;font-family:Arial,sans-serif;background:#f0f4f8;}@media print{body{background:white;}}</style>
+</head><body><div style="max-width:800px;margin:20px auto;">${currentReportHtml}</div></body></html>`;
+  const blob = new Blob([fullHtml], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = titulo.replace(/[^a-zA-Z0-9_\-\s]/g,'').replace(/\s+/g,'_') + '.html';
+  a.click();
+  toast('Informe descargado', 'success');
+}
+
+// ══════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function fmt(d)       { return d.toISOString().split('T')[0]; }
+function fmtTime(d)   { return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function fmtDisplay(d){ if(!d) return '—'; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+function fmtN(n)      { return parseInt(n||0).toLocaleString('es-ES'); }
+function esc(s)       { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ══════════════════════════════════════
+// START
+// ══════════════════════════════════════
+initFirebase();
+</script>
+</body>
+</html>
