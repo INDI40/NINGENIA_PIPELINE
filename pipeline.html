@@ -1224,12 +1224,23 @@ function exitBulkMode() {
 }
 
 function toggleBulkSelect(id) {
-  if (bulkSelected.has(id)) bulkSelected.delete(id);
-  else bulkSelected.add(id);
+  const card = document.getElementById('card-' + id);
+  if (bulkSelected.has(id)) {
+    bulkSelected.delete(id);
+    if (card) {
+      card.classList.remove('bulk-selected');
+      const chk = card.querySelector('.bulk-check');
+      if (chk) chk.textContent = '';
+    }
+  } else {
+    bulkSelected.add(id);
+    if (card) {
+      card.classList.add('bulk-selected');
+      const chk = card.querySelector('.bulk-check');
+      if (chk) chk.textContent = '✓';
+    }
+  }
   updateBulkCount();
-  const scrollY = window.scrollY;
-  renderAll();
-  requestAnimationFrame(() => window.scrollTo(0, scrollY));
 }
 
 function updateBulkCount() {
