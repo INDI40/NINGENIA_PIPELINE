@@ -809,9 +809,9 @@ body {
     <span id="sync-label">Iniciando...</span>
   </div>
   <div class="header-actions">
-    <button class="btn-icon" onclick="window.open('agenda.html','_blank')">📅 Agenda</button>
-    <button class="btn-icon" onclick="window.open('importar_prospectos.html','_blank')">📥 Importar</button>
-    <button class="btn-icon" onclick="window.open('informe_pipeline.html','_blank')">📋 Informes</button>
+    <button class="btn-icon" onclick="location.href='agenda.html'">📅 Agenda</button>
+    <button class="btn-icon" onclick="location.href='importar_prospectos.html'">📥 Importar</button>
+    <button class="btn-icon" onclick="location.href='informe_pipeline.html'">📋 Informes</button>
     <button class="btn-icon" onclick="openSetupModal()">⚙ Config</button>
   </div>
 </div>
@@ -1227,7 +1227,9 @@ function toggleBulkSelect(id) {
   if (bulkSelected.has(id)) bulkSelected.delete(id);
   else bulkSelected.add(id);
   updateBulkCount();
+  const scrollY = window.scrollY;
   renderAll();
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
 }
 
 function updateBulkCount() {
