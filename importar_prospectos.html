@@ -158,6 +158,23 @@ tr:nth-child(even) td { background: #f8f9fa; }
 
 <div id="layout">
 
+  <!-- NEGOCIO SELECTOR — siempre visible arriba -->
+  <div style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:18px 22px;">
+    <div style="font-size:13px;font-weight:700;color:#1F4E79;margin-bottom:12px;">🏢 ¿A qué empresa importar los prospectos?</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <label id="lbl-neg-ningenia" onclick="onNegocioChange('ningenia')"
+        style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 20px;border-radius:8px;border:2px solid #2E75B6;background:#EBF4FA;font-size:14px;font-weight:700;color:#1F4E79;transition:all 0.2s;">
+        <input type="radio" name="neg-import" value="ningenia" checked style="width:16px;height:16px;">
+        ⬡ Ningenia
+      </label>
+      <label id="lbl-neg-loncheria" onclick="onNegocioChange('loncheria')"
+        style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 20px;border-radius:8px;border:2px solid #ddd;background:#f8f9fa;font-size:14px;font-weight:700;color:#7f8c8d;transition:all 0.2s;">
+        <input type="radio" name="neg-import" value="loncheria" style="width:16px;height:16px;">
+        🥩 La Lonchería del Jamón
+      </label>
+    </div>
+  </div>
+
   <!-- INFO -->
   <div class="info-box">
     📋 Importa prospectos desde cualquier archivo Excel (.xlsx, .xls) directamente al pipeline. Elige el archivo, la hoja, mapea las columnas y listo.
@@ -324,12 +341,11 @@ tr:nth-child(even) td { background: #f8f9fa; }
 const LS_CFG = 'ningenia_firebase_cfg';
 const LS_KEY = 'ningenia_pipeline_data';
 const LS_NEG = 'ningenia_current_negocio';
+let selectedNegocio = localStorage.getItem(LS_NEG) || 'ningenia';
 
-// Pre-select the last used negocio
 window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem(LS_NEG) || 'ningenia';
-  const radio = document.querySelector(`input[name="neg-import"][value="${saved}"]`);
-  if (radio) { radio.checked = true; onNegocioChange(saved); }
+  const radio = document.querySelector(`input[name="neg-import"][value="${selectedNegocio}"]`);
+  if (radio) { radio.checked = true; onNegocioChange(selectedNegocio); }
 });
 
 // Pipeline target fields
@@ -628,27 +644,39 @@ const ETAPAS = {
 };
 
 function getNegocioImport() {
-  return document.querySelector('input[name="neg-import"]:checked')?.value || 'ningenia';
+  // Use global variable (more reliable than DOM query)
+  return selectedNegocio || 'ningenia';
 }
 
 function onNegocioChange(neg) {
-  // Update solution options
+  selectedNegocio = neg;
+  localStorage.setItem(LS_NEG, neg);
+
+  // Check the right radio
+  document.querySelectorAll('input[name="neg-import"]').forEach(r => r.checked = r.value === neg);
+
+  // Style top labels
+  const colors = { ningenia: { border:'#2E75B6', bg:'#EBF4FA', color:'#1F4E79' }, loncheria: { border:'#B03A2E', bg:'#FEF0EC', color:'#7D2436' } };
+  ['ningenia','loncheria'].forEach(id => {
+    const lbl = document.getElementById('lbl-neg-' + id);
+    if (!lbl) return;
+    const active = id === neg;
+    lbl.style.borderColor = active ? colors[id].border : '#ddd';
+    lbl.style.background  = active ? colors[id].bg : '#f8f9fa';
+    lbl.style.color       = active ? colors[id].color : '#7f8c8d';
+  });
+
+  // Update solution select
   const sol = document.getElementById('def-solucion');
   if (sol) sol.innerHTML = SOLUCIONES[neg].map(s => `<option value="${s==='Sin especificar'?'':s}">${s}</option>`).join('');
-  // Update etapa options
+
+  // Update etapa select
   const etapa = document.getElementById('def-etapa');
   if (etapa) etapa.innerHTML = ETAPAS[neg].map(e => `<option value="${e.v}">${e.l}</option>`).join('');
-  // Update label
+
+  // Update solution label
   const lbl = document.getElementById('label-solucion');
   if (lbl) lbl.textContent = neg === 'loncheria' ? 'Línea de negocio' : 'Solución Ningenia';
-  // Update radio label styles
-  document.querySelectorAll('input[name="neg-import"]').forEach(r => {
-    const lbl = r.closest('label');
-    if (lbl) {
-      lbl.style.borderColor = r.value === neg ? (neg==='loncheria'?'#B03A2E':'#2E75B6') : '#ddd';
-      lbl.style.color = r.value === neg ? (neg==='loncheria'?'#7D2436':'#1F4E79') : '#7f8c8d';
-    }
-  });
 }
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
