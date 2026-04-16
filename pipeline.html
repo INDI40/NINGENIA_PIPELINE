@@ -1131,31 +1131,47 @@ async function initFirebase() {
     loadLocal();
     return;
   }
+  showFirebaseError(null); // clear any previous error
   try {
-    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+    const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
     const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
-    const app = initializeApp(cfg);
+    // Prevent "app already exists" error
+    const app = getApps().length ? getApp() : initializeApp(cfg);
     firebaseDb = { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, db: getFirestore(app) };
-    // Subscribe
     const colRef = firebaseDb.collection(firebaseDb.db, 'oportunidades');
     unsubscribe = firebaseDb.onSnapshot(colRef, snap => {
       allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       applyFilters();
       renderAll();
     }, err => {
-      console.error(err);
+      const msg = err.code === 'permission-denied'
+        ? 'Sin permisos en Firestore. Ve a Firebase → Firestore → Reglas y pon: allow read, write: if true;'
+        : 'Error Firebase: ' + err.message;
+      showFirebaseError(msg);
       setSyncStatus('offline');
-      toast('Error de conexión. Usando datos locales.', 'error');
       loadLocal();
     });
     setSyncStatus('cloud');
     toast('Conectado a Firebase ☁', 'success');
   } catch (e) {
-    console.error(e);
+    showFirebaseError('Error al conectar: ' + e.message);
     setSyncStatus('local');
     loadLocal();
-    toast('Firebase no disponible. Modo local activo.', 'info');
   }
+}
+
+function showFirebaseError(msg) {
+  let banner = document.getElementById('firebase-error-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'firebase-error-banner';
+    banner.style.cssText = 'background:#fdedec;border-bottom:3px solid #e74c3c;color:#c0392b;padding:10px 20px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;';
+    const header = document.getElementById('header');
+    if (header && header.nextSibling) header.parentNode.insertBefore(banner, header.nextSibling);
+  }
+  if (!msg) { banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  banner.innerHTML = `⚠ ${msg} <button onclick="openSetupModal()" style="margin-left:auto;background:#e74c3c;color:white;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">⚙ Abrir Config</button>`;
 }
 
 function loadLocal() {
