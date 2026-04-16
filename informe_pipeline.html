@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Informes — Ningenia Pipeline</title>
+<style>
+:root {
+  --blue-dark: #1F4E79;
+  --blue-mid: #2E75B6;
+  --blue-light: #D5E8F0;
+  --blue-pale: #EBF4FA;
+  --green: #27ae60;
+  --red: #e74c3c;
+  --orange: #e67e22;
+  --gray: #95a5a6;
+  --gray-light: #ecf0f1;
+  --text: #2c3e50;
+  --text-light: #7f8c8d;
+  --white: #ffffff;
+  --shadow: 0 2px 8px rgba(0,0,0,0.12);
+  --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: var(--text); }
+
+/* ── HEADER ── */
+#app-header {
+  background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+  color: white;
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+}
+#app-header .brand { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--blue-mid); color: white; }
+.btn-primary:hover { background: var(--blue-dark); }
+.btn-secondary { background: var(--gray-light); color: var(--text); }
+.btn-secondary:hover { background: #d5d8dc; }
+.btn-white { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }
+.btn-white:hover { background: rgba(255,255,255,0.25); }
+
+/* ── CONTROLS ── */
+#controls {
+  background: white;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--gray-light);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow);
+}
+.ctrl-group { display: flex; flex-direction: column; gap: 4px; }
+.ctrl-group label { font-size: 11px; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.4px; }
+.ctrl-group input, .ctrl-group select {
+  padding: 8px 12px;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+.ctrl-group input:focus, .ctrl-group select:focus { outline: none; border-color: var(--blue-mid); }
+.ctrl-actions { margin-left: auto; display: flex; gap: 10px; }
+
+/* ── LAYOUT ── */
+#layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 0 24px 40px;
+  gap: 16px;
+}
+
+/* ── REPORT WRAPPER ── */
+#report-wrapper {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+#report-container {
+  padding: 0;
+  font-family: Arial, sans-serif;
+  color: #1a1a2e;
+}
+
+/* ════════════════════════════
+   REPORT STYLES (also used in print)
+════════════════════════════ */
+.rpt { font-family: Arial, sans-serif; color: #1a1a2e; }
+
+/* Cover */
+.rpt-cover {
+  background: linear-gradient(160deg, #1F4E79 0%, #2E75B6 60%, #4da6d9 100%);
+  color: white;
+  padding: 48px 48px 36px;
+  position: relative;
+  overflow: hidden;
+}
+.rpt-cover::after {
+  content: '⬡';
+  position: absolute;
+  right: 30px;
+  top: 20px;
+  font-size: 120px;
+  opacity: 0.08;
+  line-height: 1;
+}
+.rpt-cover-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 14px;
+}
+.rpt-cover-title {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.rpt-cover-subtitle {
+  font-size: 16px;
+  opacity: 0.85;
+  margin-bottom: 28px;
+}
+.rpt-cover-meta {
+  display: flex;
+  gap: 32px;
+  font-size: 13px;
+  opacity: 0.8;
+  flex-wrap: wrap;
+}
+.rpt-cover-meta span { display: flex; flex-direction: column; }
+.rpt-cover-meta strong { font-size: 15px; opacity: 1; font-weight: 700; }
+
+/* Body sections */
+.rpt-body { padding: 32px 48px; }
+
+.rpt-section { margin-bottom: 36px; }
+
+.rpt-section-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1F4E79;
+  padding-bottom: 8px;
+  border-bottom: 3px solid #2E75B6;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Resumen ejecutivo KPIs */
+.rpt-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.rpt-kpi {
+  background: #EBF4FA;
+  border-radius: 6px;
+  padding: 14px 16px;
+  border-top: 3px solid #2E75B6;
+}
+.rpt-kpi.green { border-top-color: #27ae60; background: #eafaf1; }
+.rpt-kpi.red   { border-top-color: #e74c3c; background: #fdedec; }
+.rpt-kpi.orange{ border-top-color: #e67e22; background: #fef5e7; }
+.rpt-kpi-label { font-size: 10px; font-weight: 700; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.rpt-kpi-value { font-size: 24px; font-weight: 800; color: #1F4E79; }
+.rpt-kpi.green .rpt-kpi-value { color: #27ae60; }
+.rpt-kpi.red .rpt-kpi-value   { color: #e74c3c; }
+.rpt-kpi.orange .rpt-kpi-value{ color: #e67e22; }
+.rpt-kpi-sub   { font-size: 11px; color: #7f8c8d; margin-top: 3px; }
+
+/* Progress bar */
+.rpt-progress-wrap { margin: 10px 0 4px; }
+.rpt-progress-label { display: flex; justify-content: space-between; font-size: 11px; color: #7f8c8d; margin-bottom: 4px; }
+.rpt-progress { height: 10px; background: #d0e8f5; border-radius: 5px; overflow: hidden; }
+.rpt-progress-bar { height: 100%; background: linear-gradient(to right, #2E75B6, #27ae60); border-radius: 5px; }
+
+/* Tables */
+.rpt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.rpt-table th {
+  background: #1F4E79;
+  color: white;
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.rpt-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e8ecf0;
+  color: #2c3e50;
+  vertical-align: top;
+}
+.rpt-table tr:last-child td { border-bottom: none; }
+.rpt-table tr:nth-child(even) td { background: #f8f9fa; }
+.rpt-table tr:hover td { background: #EBF4FA; }
+
+/* Stage pill */
+.rpt-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+}
+
+/* Alerts box */
+.rpt-alert-box {
+  background: #fdedec;
+  border: 1px solid #f5b7b1;
+  border-left: 4px solid #e74c3c;
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.rpt-alert-box h4 { color: #c0392b; font-size: 13px; margin-bottom: 8px; }
+.rpt-alert-box ul { padding-left: 20px; font-size: 12px; line-height: 1.8; }
+.rpt-info-box {
+  background: #EBF4FA;
+  border: 1px solid #AED6F1;
+  border-left: 4px solid #2E75B6;
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.rpt-info-box h4 { color: #1F4E79; font-size: 13px; margin-bottom: 8px; }
+.rpt-info-box ul { padding-left: 20px; font-size: 12px; line-height: 1.8; }
+
+/* Footer */
+.rpt-footer {
+  background: #1F4E79;
+  color: rgba(255,255,255,0.7);
+  padding: 20px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+.rpt-footer strong { color: white; }
+
+/* ── PRINT ── */
+@media print {
+  #app-header, #controls, #layout > *:not(#report-wrapper) { display: none !important; }
+  #layout { max-width: none; margin: 0; padding: 0; }
+  #report-wrapper { box-shadow: none; border-radius: 0; }
+  .rpt-cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rpt-body { padding: 24px 32px; }
+  .rpt-section { break-inside: avoid; }
+  .rpt-kpi-row { break-inside: avoid; }
+  .rpt-table { break-inside: auto; }
+  .rpt-table tr { break-inside: avoid; }
+}
+
+/* ── TOAST ── */
+#toast-container {
+  position: fixed; bottom: 20px; right: 20px;
+  z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  background: #2c3e50; color: white; padding: 12px 18px;
+  border-radius: 4px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  animation: toastIn 0.3s ease;
+}
+.toast.success { background: #27ae60; }
+.toast.error   { background: #e74c3c; }
+.toast.info    { background: #2E75B6; }
+@keyframes toastIn {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <div class="brand">
+    <span>⬡</span>
+    <span>Ningenia — Generador de Informes</span>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-white" onclick="window.open('pipeline.html','_blank')">← Volver al Pipeline</button>
+  </div>
+</div>
+
+<div id="controls">
+  <div class="ctrl-group">
+    <label>Desde</label>
+    <input type="date" id="ctrl-from">
+  </div>
+  <div class="ctrl-group">
+    <label>Hasta</label>
+    <input type="date" id="ctrl-to">
+  </div>
+  <div class="ctrl-group">
+    <label>Comercial</label>
+    <select id="ctrl-comercial">
+      <option value="">Todos</option>
+      <option value="David">David</option>
+      <option value="Comercial 2">Comercial 2</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>Período</label>
+    <select id="ctrl-periodo" onchange="setPeriodo()">
+      <option value="custom">Personalizado</option>
+      <option value="week">Esta semana</option>
+      <option value="month" selected>Este mes</option>
+      <option value="quarter">Este trimestre</option>
+      <option value="year">Este año</option>
+    </select>
+  </div>
+  <div class="ctrl-actions">
+    <button class="btn btn-primary" onclick="generateReport()">▶ Generar Informe</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨 Imprimir / PDF</button>
+    <button class="btn btn-secondary" onclick="copyHtml()">📋 Copiar HTML</button>
+  </div>
+</div>
+
+<div id="layout">
+  <div id="report-wrapper">
+    <div id="report-container">
+      <div style="padding:60px 48px; text-align:center; color:#95a5a6;">
+        <div style="font-size:48px;margin-bottom:16px;">📊</div>
+        <p style="font-size:16px;font-weight:600;margin-bottom:8px;">Configure el período y pulse "Generar Informe"</p>
+        <p style="font-size:13px;">El informe se generará a partir de los datos del pipeline</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════
+const OBJETIVO_ANUAL = 350000;
+const STAGES_ACTIVE = [
+  { id: 'prospecto',   label: 'Prospecto',        prob: 0.05, color: '#95a5a6' },
+  { id: 'contacto',    label: 'Contacto',          prob: 0.10, color: '#3498db' },
+  { id: 'cualificado', label: 'Cualificado',       prob: 0.25, color: '#2980b9' },
+  { id: 'visita',      label: 'Visita / Demo',     prob: 0.40, color: '#e67e22' },
+  { id: 'propuesta',   label: 'Propuesta Enviada', prob: 0.65, color: '#c0392b' },
+  { id: 'negociacion', label: 'Negociación',       prob: 0.85, color: '#27ae60' },
+];
+const STAGE_MAP = {};
+STAGES_ACTIVE.forEach(s => STAGE_MAP[s.id] = s);
+STAGE_MAP['cerrado']    = { id: 'cerrado',    label: 'Cerrado',    prob: 1,    color: '#27ae60' };
+STAGE_MAP['descartado'] = { id: 'descartado', label: 'Descartado', prob: 0,    color: '#95a5a6' };
+
+const LS_KEY = 'ningenia_pipeline_data';
+const LS_CFG = 'ningenia_firebase_cfg';
+
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+let allData = [];
+let firebaseReady = false;
+
+async function loadData() {
+  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
+  if (cfg && cfg.apiKey) {
+    try {
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+      const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
+      const app = initializeApp(cfg, 'informe-app');
+      const db = getFirestore(app);
+      const snap = await getDocs(collection(db, 'oportunidades'));
+      allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      firebaseReady = true;
+      toast('Datos cargados desde Firebase ☁', 'success');
+      return;
+    } catch (e) { console.error(e); }
+  }
+  allData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  if (allData.length === 0) toast('No hay datos. Abre pipeline.html y añade oportunidades.', 'info');
+  else toast(`${allData.length} oportunidades cargadas (modo local)`, 'info');
+}
+
+// ══════════════════════════════════════
+// PERIOD SELECTOR
+// ══════════════════════════════════════
+function setPeriodo() {
+  const v = document.getElementById('ctrl-periodo').value;
+  const now = new Date();
+  let from, to;
+  to = fmt(now);
+  if (v === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - d.getDay() + 1);
+    from = fmt(d);
+  } else if (v === 'month') {
+    from = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
+  } else if (v === 'quarter') {
+    const q = Math.floor(now.getMonth() / 3);
+    from = now.getFullYear() + '-' + String(q*3+1).padStart(2,'0') + '-01';
+  } else if (v === 'year') {
+    from = now.getFullYear() + '-01-01';
+  } else { return; }
+  document.getElementById('ctrl-from').value = from;
+  document.getElementById('ctrl-to').value   = to;
+}
+
+function fmt(d) { return d.toISOString().split('T')[0]; }
+function fmtDisplay(d) { if (!d) return '—'; const p = d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+function fmtNum(n) { return parseInt(n||0).toLocaleString('es-ES'); }
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════
+// GENERATE REPORT
+// ══════════════════════════════════════
+function generateReport() {
+  const fromDate = document.getElementById('ctrl-from').value;
+  const toDate   = document.getElementById('ctrl-to').value;
+  const comercial = document.getElementById('ctrl-comercial').value;
+
+  if (!fromDate || !toDate) { toast('Selecciona un período', 'error'); return; }
+
+  // Filter by comercial
+  let data = comercial ? allData.filter(o => o.comercial === comercial) : allData;
+
+  // Active opportunities (in pipeline, not closed/discarded)
+  const active = data.filter(o => !['cerrado','descartado'].includes(o.etapa));
+  // Closed in period
+  const closedInPeriod = data.filter(o => o.etapa === 'cerrado' && o.fechaCierre >= fromDate && o.fechaCierre <= toDate);
+  // All closed ever
+  const allClosed = data.filter(o => o.etapa === 'cerrado');
+  // Discarded in period
+  const discardedInPeriod = data.filter(o => o.etapa === 'descartado');
+  // New in period
+  const newInPeriod = data.filter(o => o.fechaEntrada >= fromDate && o.fechaEntrada <= toDate && !['descartado'].includes(o.etapa));
+
+  // KPIs
+  const closedValue = allClosed.reduce((s,o) => s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0), 0);
+  const closedPeriodValue = closedInPeriod.reduce((s,o) => s+(parseFloat(o.ticketReal)||parseFloat(o.ticketEstimado)||0), 0);
+  const pipelineWeighted = active.reduce((s,o) => s+(parseFloat(o.ticketEstimado)||0)*(STAGE_MAP[o.etapa]?.prob||0), 0);
+  const pipelineTotal    = active.reduce((s,o) => s+(parseFloat(o.ticketEstimado)||0), 0);
+  const pctObjetivo = Math.min(Math.round((closedValue/OBJETIVO_ANUAL)*100), 100);
+  const todayStr = fmt(new Date());
+  const overdue  = active.filter(o => o.fechaAccion && o.fechaAccion < todayStr);
+  const noContact= active.filter(o => o.fechaContacto && daysBetween(o.fechaContacto, todayStr) > 14);
+  const convRate = (data.filter(o=>o.etapa!=='descartado').length > 0)
+    ? Math.round((allClosed.length / data.filter(o=>o.etapa!=='descartado').length)*100) : 0;
+
+  // Activity in period (from historial)
+  const activity = [];
+  data.forEach(opp => {
+    (opp.historial || []).forEach(h => {
+      if (h.fecha >= fromDate && h.fecha <= toDate) activity.push({ ...h, empresa: opp.empresa });
+    });
+  });
+  activity.sort((a,b) => b.fecha.localeCompare(a.fecha));
+
+  // Next actions
+  const nextActions = active
+    .filter(o => o.proximaAccion && o.fechaAccion)
+    .sort((a,b) => a.fechaAccion.localeCompare(b.fechaAccion))
+    .slice(0, 15);
+
+  // Top opps
+  const topOpps = [...active].sort((a,b) => (parseFloat(b.ticketEstimado)||0)-(parseFloat(a.ticketEstimado)||0)).slice(0,10);
+
+  // Periodo label
+  const periodoLabel = `${fmtDisplay(fromDate)} – ${fmtDisplay(toDate)}`;
+  const genDate = fmtDisplay(todayStr);
+
+  const html = `<div class="rpt">
+<!-- COVER -->
+<div class="rpt-cover">
+  <div class="rpt-cover-tag">Informe Comercial · Ningenia</div>
+  <div class="rpt-cover-title">Informe de Seguimiento<br>Pipeline de Ventas</div>
+  <div class="rpt-cover-subtitle">${periodoLabel}</div>
+  <div class="rpt-cover-meta">
+    <span>Preparado para<strong>David Suárez &amp; Roberto García</strong></span>
+    <span>Generado<strong>${genDate}</strong></span>
+    ${comercial ? `<span>Comercial<strong>${esc(comercial)}</strong></span>` : ''}
+    <span>Objetivo anual<strong>€${fmtNum(OBJETIVO_ANUAL)}</strong></span>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="rpt-body">
+
+<!-- 1. RESUMEN EJECUTIVO -->
+<div class="rpt-section">
+  <div class="rpt-section-title">📌 1. Resumen Ejecutivo</div>
+  <div class="rpt-kpi-row">
+    <div class="rpt-kpi green">
+      <div class="rpt-kpi-label">Facturado Acumulado</div>
+      <div class="rpt-kpi-value">€${fmtNum(closedValue)}</div>
+      <div class="rpt-kpi-sub">${pctObjetivo}% del objetivo anual</div>
+      <div class="rpt-progress-wrap">
+        <div class="rpt-progress-label"><span>Avance objetivo</span><span>${pctObjetivo}%</span></div>
+        <div class="rpt-progress"><div class="rpt-progress-bar" style="width:${pctObjetivo}%"></div></div>
+      </div>
+    </div>
+    <div class="rpt-kpi">
+      <div class="rpt-kpi-label">Pipeline Ponderado</div>
+      <div class="rpt-kpi-value">€${fmtNum(pipelineWeighted)}</div>
+      <div class="rpt-kpi-sub">Pipeline bruto: €${fmtNum(pipelineTotal)}</div>
+    </div>
+    <div class="rpt-kpi">
+      <div class="rpt-kpi-label">Oportunidades Activas</div>
+      <div class="rpt-kpi-value">${active.length}</div>
+      <div class="rpt-kpi-sub">${newInPeriod.length} nuevas en el período</div>
+    </div>
+  </div>
+  <div class="rpt-kpi-row">
+    <div class="rpt-kpi green">
+      <div class="rpt-kpi-label">Cerrados en el Período</div>
+      <div class="rpt-kpi-value">${closedInPeriod.length}</div>
+      <div class="rpt-kpi-sub">€${fmtNum(closedPeriodValue)} en el período</div>
+    </div>
+    <div class="rpt-kpi ${overdue.length > 0 ? 'red' : 'green'}">
+      <div class="rpt-kpi-label">Acciones Vencidas</div>
+      <div class="rpt-kpi-value">${overdue.length}</div>
+      <div class="rpt-kpi-sub">${overdue.length > 0 ? 'Requieren atención urgente' : 'Al día'}</div>
+    </div>
+    <div class="rpt-kpi">
+      <div class="rpt-kpi-label">Tasa de Conversión</div>
+      <div class="rpt-kpi-value">${convRate}%</div>
+      <div class="rpt-kpi-sub">${allClosed.length} cerrados de ${data.filter(o=>o.etapa!=='descartado').length}</div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. ESTADO DEL PIPELINE POR ETAPA -->
+<div class="rpt-section">
+  <div class="rpt-section-title">🔵 2. Estado del Pipeline por Etapa</div>
+  <table class="rpt-table">
+    <thead><tr>
+      <th>Etapa</th><th>Nº Oport.</th><th>Valor Bruto</th><th>Prob.</th><th>Valor Ponderado</th>
+    </tr></thead>
+    <tbody>
+      ${STAGES_ACTIVE.map(st => {
+        const opps = active.filter(o => o.etapa === st.id);
+        const val  = opps.reduce((s,o) => s+(parseFloat(o.ticketEstimado)||0), 0);
+        const wval = val * st.prob;
+        return `<tr>
+          <td><span class="rpt-pill" style="background:${st.color}">${st.label}</span></td>
+          <td>${opps.length}</td>
+          <td>€${fmtNum(val)}</td>
+          <td>${Math.round(st.prob*100)}%</td>
+          <td><strong>€${fmtNum(wval)}</strong></td>
+        </tr>`;
+      }).join('')}
+      <tr style="background:#EBF4FA;font-weight:700;">
+        <td>TOTAL ACTIVO</td>
+        <td>${active.length}</td>
+        <td>€${fmtNum(pipelineTotal)}</td>
+        <td>—</td>
+        <td>€${fmtNum(pipelineWeighted)}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 3. TOP OPORTUNIDADES -->
+<div class="rpt-section">
+  <div class="rpt-section-title">⭐ 3. Top Oportunidades en Pipeline</div>
+  ${topOpps.length === 0 ? '<p style="color:#95a5a6;font-size:13px;">Sin oportunidades activas.</p>' : `
+  <table class="rpt-table">
+    <thead><tr>
+      <th>Empresa</th><th>Sector</th><th>Solución</th><th>Etapa</th><th>Ticket Est.</th><th>Val. Pond.</th><th>Comercial</th>
+    </tr></thead>
+    <tbody>
+      ${topOpps.map(o => {
+        const st = STAGE_MAP[o.etapa];
+        const wval = (parseFloat(o.ticketEstimado)||0) * (st?.prob||0);
+        return `<tr>
+          <td><strong>${esc(o.empresa)}</strong><br><span style="font-size:10px;color:#7f8c8d;">${esc(o.contacto||'')}</span></td>
+          <td>${esc(o.sector||'—')}</td>
+          <td>${esc(o.solucion||'—')}</td>
+          <td><span class="rpt-pill" style="background:${st?.color||'#95a5a6'}">${st?.label||o.etapa}</span></td>
+          <td>€${fmtNum(o.ticketEstimado)}</td>
+          <td>€${fmtNum(wval)}</td>
+          <td>${esc(o.comercial||'—')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`}
+</div>
+
+<!-- 4. PROYECTOS CERRADOS EN EL PERÍODO -->
+<div class="rpt-section">
+  <div class="rpt-section-title">✅ 4. Proyectos Cerrados en el Período</div>
+  ${closedInPeriod.length === 0
+    ? '<p style="color:#95a5a6;font-size:13px;">No se han cerrado proyectos en este período.</p>'
+    : `<table class="rpt-table">
+    <thead><tr><th>Empresa</th><th>Solución</th><th>Ticket Real</th><th>Fecha Cierre</th><th>Comercial</th></tr></thead>
+    <tbody>
+      ${closedInPeriod.map(o => `<tr>
+        <td><strong>${esc(o.empresa)}</strong></td>
+        <td>${esc(o.solucion||'—')}</td>
+        <td style="color:#27ae60;font-weight:700;">€${fmtNum(o.ticketReal||o.ticketEstimado)}</td>
+        <td>${fmtDisplay(o.fechaCierre)}</td>
+        <td>${esc(o.comercial||'—')}</td>
+      </tr>`).join('')}
+      <tr style="background:#eafaf1;font-weight:700;">
+        <td colspan="2">TOTAL PERÍODO</td>
+        <td style="color:#27ae60;">€${fmtNum(closedPeriodValue)}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table>`}
+</div>
+
+<!-- 5. ACTIVIDAD DEL PERÍODO -->
+<div class="rpt-section">
+  <div class="rpt-section-title">📅 5. Actividad del Período</div>
+  ${activity.length === 0
+    ? '<p style="color:#95a5a6;font-size:13px;">Sin actividad registrada en el historial para este período.</p>'
+    : `<table class="rpt-table">
+    <thead><tr><th>Fecha</th><th>Empresa</th><th>Actividad</th><th>Comercial</th></tr></thead>
+    <tbody>
+      ${activity.slice(0, 25).map(h => `<tr>
+        <td>${fmtDisplay(h.fecha)}</td>
+        <td><strong>${esc(h.empresa||'—')}</strong></td>
+        <td>${esc(histText(h))}</td>
+        <td>${esc(h.comercial||'—')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  ${activity.length > 25 ? `<p style="font-size:11px;color:#95a5a6;margin-top:6px;">Se muestran las 25 más recientes de ${activity.length} actividades totales.</p>` : ''}`}
+</div>
+
+<!-- 6. PRÓXIMAS ACCIONES -->
+<div class="rpt-section">
+  <div class="rpt-section-title">⏰ 6. Próximas Acciones Comprometidas</div>
+  ${nextActions.length === 0
+    ? '<p style="color:#95a5a6;font-size:13px;">Sin próximas acciones registradas.</p>'
+    : `<table class="rpt-table">
+    <thead><tr><th>Empresa</th><th>Etapa</th><th>Próxima Acción</th><th>Fecha</th><th>Comercial</th></tr></thead>
+    <tbody>
+      ${nextActions.map(o => {
+        const overdue = o.fechaAccion < fmt(new Date());
+        return `<tr style="${overdue ? 'background:#fdedec;' : ''}">
+          <td><strong>${esc(o.empresa)}</strong></td>
+          <td><span class="rpt-pill" style="background:${STAGE_MAP[o.etapa]?.color||'#95a5a6'}">${STAGE_MAP[o.etapa]?.label||o.etapa}</span></td>
+          <td>${esc(o.proximaAccion||'—')}</td>
+          <td style="${overdue?'color:#e74c3c;font-weight:700;':''}">
+            ${fmtDisplay(o.fechaAccion)}${overdue ? ' ⚠' : ''}
+          </td>
+          <td>${esc(o.comercial||'—')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`}
+</div>
+
+<!-- 7. ALERTAS Y RECOMENDACIONES -->
+<div class="rpt-section">
+  <div class="rpt-section-title">🚨 7. Alertas y Recomendaciones</div>
+  ${overdue.length > 0 ? `
+  <div class="rpt-alert-box">
+    <h4>⚠ Acciones vencidas (${overdue.length})</h4>
+    <ul>${overdue.map(o => `<li><strong>${esc(o.empresa)}</strong> — ${esc(o.proximaAccion||'Sin descripción')} · Vencía el ${fmtDisplay(o.fechaAccion)}</li>`).join('')}</ul>
+  </div>` : ''}
+  ${noContact.length > 0 ? `
+  <div class="rpt-alert-box">
+    <h4>📵 Sin contacto hace más de 14 días (${noContact.length})</h4>
+    <ul>${noContact.map(o => `<li><strong>${esc(o.empresa)}</strong> — Último contacto: ${fmtDisplay(o.fechaContacto)} · Etapa: ${STAGE_MAP[o.etapa]?.label||o.etapa}</li>`).join('')}</ul>
+  </div>` : ''}
+  ${(closedValue / OBJETIVO_ANUAL) < 0.25 ? `
+  <div class="rpt-info-box">
+    <h4>📈 Ritmo de consecución del objetivo</h4>
+    <ul>
+      <li>Facturado: €${fmtNum(closedValue)} (${pctObjetivo}% del objetivo de €${fmtNum(OBJETIVO_ANUAL)})</li>
+      <li>Se necesita acelerar el cierre de propuestas y negociaciones</li>
+      <li>Pipeline ponderado actual (€${fmtNum(pipelineWeighted)}) ${pipelineWeighted >= (OBJETIVO_ANUAL - closedValue) ? 'es suficiente para cubrir el objetivo' : 'no cubre el objetivo restante — ampliar prospección'}</li>
+    </ul>
+  </div>` : `
+  <div class="rpt-info-box">
+    <h4>✅ Situación general del pipeline</h4>
+    <ul>
+      <li>Progreso del objetivo anual: ${pctObjetivo}% — €${fmtNum(closedValue)} de €${fmtNum(OBJETIVO_ANUAL)}</li>
+      <li>Pipeline ponderado: €${fmtNum(pipelineWeighted)} — ${pipelineWeighted >= (OBJETIVO_ANUAL - closedValue) ? 'suficiente para alcanzar el objetivo' : 'necesita refuerzo en fases avanzadas'}</li>
+      <li>Tasa de conversión: ${convRate}%</li>
+    </ul>
+  </div>`}
+  ${overdue.length === 0 && noContact.length === 0 ? `
+  <div class="rpt-info-box">
+    <h4>✅ Sin alertas activas</h4>
+    <ul><li>Todas las acciones están al día y no hay oportunidades sin contacto reciente.</li></ul>
+  </div>` : ''}
+</div>
+
+</div><!-- end rpt-body -->
+
+<!-- FOOTER -->
+<div class="rpt-footer">
+  <span>⬡ <strong>Ningenia</strong> — Informe Pipeline Comercial</span>
+  <span>Período: ${periodoLabel}</span>
+  <span>Generado: ${genDate}</span>
+</div>
+
+</div><!-- end rpt -->`;
+
+  document.getElementById('report-container').innerHTML = html;
+  toast('Informe generado correctamente', 'success');
+}
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function histText(h) {
+  if (h.tipo === 'cambio_etapa') return `${h.etapaAnterior ? (STAGE_MAP[h.etapaAnterior]?.label||h.etapaAnterior)+' → ' : ''}${STAGE_MAP[h.etapaNueva]?.label||h.etapaNueva||''}${h.nota?' · '+h.nota:''}`;
+  if (h.tipo === 'nota') return '📝 ' + (h.nota||'');
+  return h.nota || '';
+}
+
+function daysBetween(d1, d2) {
+  return Math.floor((new Date(d2) - new Date(d1)) / 86400000);
+}
+
+function copyHtml() {
+  const html = document.getElementById('report-container').innerHTML;
+  if (!html || html.includes('Configure el período')) { toast('Genera el informe primero', 'error'); return; }
+  const fullHtml = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
+body{font-family:Arial,sans-serif;margin:0;background:#f0f4f8;color:#1a1a2e;}
+${document.querySelector('style').textContent}
+</style></head><body><div style="max-width:860px;margin:0 auto;">${html}</div></body></html>`;
+  navigator.clipboard.writeText(fullHtml).then(() => toast('HTML copiado al portapapeles', 'success')).catch(() => toast('No se pudo copiar', 'error'));
+}
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+setPeriodo();
+loadData();
+</script>
+</body>
+</html>
