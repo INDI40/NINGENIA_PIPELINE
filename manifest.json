@@ -1,0 +1,46 @@
+{
+  "name": "Ningenia — Pipeline Comercial",
+  "short_name": "Ningenia",
+  "description": "Gestión comercial y pipeline de ventas — Indi Lucer",
+  "start_url": "/NINGENIA_PIPELINE/pipeline.html",
+  "scope": "/NINGENIA_PIPELINE/",
+  "display": "standalone",
+  "background_color": "#1F4E79",
+  "theme_color": "#1F4E79",
+  "orientation": "any",
+  "lang": "es",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pipeline",
+      "short_name": "Pipeline",
+      "url": "/NINGENIA_PIPELINE/pipeline.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Agenda",
+      "short_name": "Agenda",
+      "url": "/NINGENIA_PIPELINE/agenda.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
