@@ -212,6 +212,21 @@ tr:nth-child(even) td { background: #f8f9fa; }
 
       <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--gray-light);">
         <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:12px;">Valores por defecto (para campos no mapeados)</div>
+
+        <!-- SELECTOR DE EMPRESA -->
+        <div style="background:#EBF4FA;border:2px solid #2E75B6;border-radius:8px;padding:14px 18px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:#1F4E79;margin-bottom:10px;">🏢 ¿A qué empresa importar?</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 16px;border-radius:6px;border:2px solid #2E75B6;background:white;font-size:13px;font-weight:700;">
+              <input type="radio" name="neg-import" value="ningenia" checked onchange="onNegocioChange(this.value)">
+              ⬡ Ningenia
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 16px;border-radius:6px;border:2px solid #ddd;background:white;font-size:13px;font-weight:700;color:#7f8c8d;">
+              <input type="radio" name="neg-import" value="loncheria" onchange="onNegocioChange(this.value)">
+              🥩 La Lonchería del Jamón
+            </label>
+          </div>
+        </div>
         <div class="defaults-grid">
           <div class="def-group">
             <label>Etapa inicial</label>
@@ -229,11 +244,11 @@ tr:nth-child(even) td { background: #f8f9fa; }
             </select>
           </div>
           <div class="def-group">
-            <label>Solución Ningenia</label>
+            <label id="label-solucion">Solución / Línea de negocio</label>
             <select id="def-solucion">
               <option value="">Sin especificar</option>
-              <option value="Sorter automático">Sorter automático</option>
               <option value="Automatización línea producción">Automatización línea producción</option>
+              <option value="Sorter automático">Sorter automático</option>
               <option value="Sistema visión artificial">Sistema visión artificial</option>
               <option value="Integración ERP/MES">Integración ERP/MES</option>
               <option value="Robotización picking">Robotización picking</option>
@@ -308,6 +323,14 @@ tr:nth-child(even) td { background: #f8f9fa; }
 // ══════════════════════════════════════
 const LS_CFG = 'ningenia_firebase_cfg';
 const LS_KEY = 'ningenia_pipeline_data';
+const LS_NEG = 'ningenia_current_negocio';
+
+// Pre-select the last used negocio
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem(LS_NEG) || 'ningenia';
+  const radio = document.querySelector(`input[name="neg-import"][value="${saved}"]`);
+  if (radio) { radio.checked = true; onNegocioChange(saved); }
+});
 
 // Pipeline target fields
 const PIPELINE_FIELDS = [
@@ -459,6 +482,7 @@ function buildOpportunity(row, mapping) {
 
   return {
     id: genId(),
+    negocio: getNegocioImport(),
     empresa,
     sector: get('sector'),
     contacto: get('contacto'),
@@ -593,6 +617,39 @@ function showProgress(pct) {
 
 function genId() { return 'opp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
 function today() { return new Date().toISOString().split('T')[0]; }
+
+const SOLUCIONES = {
+  ningenia:  ['Sin especificar','Automatización línea producción','Sorter automático','Sistema visión artificial','Integración ERP/MES','Robotización picking','Otro / Consultoría'],
+  loncheria: ['Sin especificar','Maquila (cliente aporta materia prima)','Marca propia (producto terminado)','Ambas líneas'],
+};
+const ETAPAS = {
+  ningenia:  [{v:'prospecto',l:'Prospecto'},{v:'contacto',l:'Contacto'},{v:'cualificado',l:'Cualificado'},{v:'visita',l:'Visita/Demo'},{v:'propuesta',l:'Propuesta Enviada'},{v:'negociacion',l:'Negociación'}],
+  loncheria: [{v:'prospecto',l:'Prospecto'},{v:'degustacion',l:'Degustación/Visita'},{v:'propuesta',l:'Propuesta'},{v:'pedido',l:'Pedido'}],
+};
+
+function getNegocioImport() {
+  return document.querySelector('input[name="neg-import"]:checked')?.value || 'ningenia';
+}
+
+function onNegocioChange(neg) {
+  // Update solution options
+  const sol = document.getElementById('def-solucion');
+  if (sol) sol.innerHTML = SOLUCIONES[neg].map(s => `<option value="${s==='Sin especificar'?'':s}">${s}</option>`).join('');
+  // Update etapa options
+  const etapa = document.getElementById('def-etapa');
+  if (etapa) etapa.innerHTML = ETAPAS[neg].map(e => `<option value="${e.v}">${e.l}</option>`).join('');
+  // Update label
+  const lbl = document.getElementById('label-solucion');
+  if (lbl) lbl.textContent = neg === 'loncheria' ? 'Línea de negocio' : 'Solución Ningenia';
+  // Update radio label styles
+  document.querySelectorAll('input[name="neg-import"]').forEach(r => {
+    const lbl = r.closest('label');
+    if (lbl) {
+      lbl.style.borderColor = r.value === neg ? (neg==='loncheria'?'#B03A2E':'#2E75B6') : '#ddd';
+      lbl.style.color = r.value === neg ? (neg==='loncheria'?'#7D2436':'#1F4E79') : '#7f8c8d';
+    }
+  });
+}
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
 </body>
