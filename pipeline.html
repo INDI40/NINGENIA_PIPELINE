@@ -885,6 +885,13 @@ body {
             <span>❌ Oportunidades Descartadas</span>
             <span id="descartados-count"></span>
           </div>
+          <div id="descartados-toolbar" style="display:none;padding:8px 14px;background:#f8f9fa;border-bottom:1px solid #e0e0e0;display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label style="font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="chk-all-desc" onchange="toggleSelectAll(this)"> Seleccionar todas
+            </label>
+            <span id="selected-count" style="font-size:12px;color:#7f8c8d;"></span>
+            <button class="btn" style="background:#e74c3c;color:white;padding:5px 14px;font-size:12px;margin-left:auto;" onclick="deleteSelected()">🗑 Borrar seleccionadas</button>
+          </div>
           <div id="descartados-body"></div>
         </div>
       </div>
@@ -1484,14 +1491,46 @@ function renderHistorial() {
         <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="openEditModal('${o.id}')">Ver</button>
       </div>`).join('');
 
+  const toolbar = document.getElementById('descartados-toolbar');
+  if (toolbar) toolbar.style.display = discarded.length > 0 ? 'flex' : 'none';
+  if (discarded.length > 0) {
+    const chkAll = document.getElementById('chk-all-desc');
+    if (chkAll) chkAll.checked = false;
+    document.getElementById('selected-count').textContent = '';
+  }
+
   document.getElementById('descartados-body').innerHTML = discarded.length === 0
     ? '<div class="empty-state"><div class="icon">🗑</div><p>Sin oportunidades descartadas</p></div>'
-    : discarded.map(o => `<div class="list-item">
+    : discarded.map(o => `<div class="list-item" id="row-${o.id}">
+        <input type="checkbox" class="desc-chk" data-id="${o.id}" onchange="updateSelectedCount()" style="margin-right:8px;width:16px;height:16px;cursor:pointer;flex-shrink:0;">
         <div class="list-empresa">${esc(o.empresa)}</div>
         <div class="list-detail">${esc(o.sector||'')} · ${esc(o.notas||'').substring(0,60)}</div>
         <div class="list-ticket" style="color:#95a5a6">€${fmt(o.ticketEstimado)}</div>
         <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="reactivate('${o.id}')">Reactivar</button>
       </div>`).join('');
+}
+
+function toggleSelectAll(chk) {
+  document.querySelectorAll('.desc-chk').forEach(c => c.checked = chk.checked);
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const selected = document.querySelectorAll('.desc-chk:checked').length;
+  const total    = document.querySelectorAll('.desc-chk').length;
+  document.getElementById('selected-count').textContent = selected > 0 ? `${selected} seleccionadas` : '';
+  const chkAll = document.getElementById('chk-all-desc');
+  if (chkAll) chkAll.checked = selected === total && total > 0;
+}
+
+async function deleteSelected() {
+  const ids = [...document.querySelectorAll('.desc-chk:checked')].map(c => c.dataset.id);
+  if (!ids.length) { toast('Selecciona al menos una', 'info'); return; }
+  if (!confirm(`¿Borrar definitivamente ${ids.length} oportunidad${ids.length > 1 ? 'es' : ''}? Esta acción no se puede deshacer.`)) return;
+  for (const id of ids) {
+    await deleteDoc_(id);
+  }
+  toast(`${ids.length} oportunidad${ids.length > 1 ? 'es borradas' : ' borrada'}`, 'success');
 }
 
 // ══════════════════════════════════════
