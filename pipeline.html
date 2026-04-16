@@ -240,6 +240,13 @@ body {
   border-radius: var(--radius-sm);
 }
 
+/* ── BULK SELECT ── */
+.card.bulk-selected { outline: 2px solid #e74c3c; background: #fff5f5; transform: none !important; }
+.card.bulk-mode { cursor: pointer !important; }
+.bulk-check { display: none; position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 3px; border: 2px solid #e74c3c; background: white; }
+.card.bulk-mode .bulk-check { display: flex; align-items: center; justify-content: center; }
+.card.bulk-selected .bulk-check { background: #e74c3c; color: white; font-size: 11px; }
+
 /* ── KANBAN CARD ── */
 .card {
   background: white;
@@ -828,9 +835,19 @@ body {
   <div class="tab" data-tab="historial" onclick="switchTab('historial')">📁 Cerrados & Descartados</div>
 </div>
 
+<!-- BULK DELETE BAR -->
+<div id="bulk-bar" style="display:none;background:#fdedec;border-bottom:2px solid #e74c3c;padding:8px 20px;display:none;align-items:center;gap:12px;flex-wrap:wrap;">
+  <span style="font-size:13px;font-weight:700;color:#c0392b;">✔ Modo selección</span>
+  <span id="bulk-count" style="font-size:13px;color:#c0392b;font-weight:600;"></span>
+  <button class="btn" style="background:#e74c3c;color:white;padding:5px 14px;font-size:12px;" onclick="bulkDelete()">🗑 Borrar seleccionadas</button>
+  <button class="btn btn-secondary" style="padding:5px 14px;font-size:12px;" onclick="exitBulkMode()">✕ Cancelar</button>
+  <span style="font-size:11px;color:#c0392b;margin-left:auto;">Haz clic en las tarjetas para seleccionarlas</span>
+</div>
+
 <!-- TOOLBAR -->
 <div id="toolbar">
   <button class="btn btn-primary" onclick="openAddModal()">+ Nueva Oportunidad</button>
+  <button class="btn" style="background:#fff0f0;color:#c0392b;border:1px solid #f5b7b1;padding:6px 14px;font-size:12px;font-weight:700;" onclick="enterBulkMode()" id="btn-bulk">☑ Selección múltiple</button>
   <div class="toolbar-filters">
     <select id="filter-comercial" onchange="applyFilters()">
       <option value="">Todos los comerciales</option>
@@ -1186,6 +1203,49 @@ let dragId = null;
 let firebaseDb = null;
 let unsubscribe = null;
 let currentMobileStage = 'prospecto';
+let bulkMode = false;
+let bulkSelected = new Set();
+
+function enterBulkMode() {
+  bulkMode = true;
+  bulkSelected.clear();
+  document.getElementById('bulk-bar').style.display = 'flex';
+  document.getElementById('btn-bulk').style.display = 'none';
+  updateBulkCount();
+  renderAll();
+}
+
+function exitBulkMode() {
+  bulkMode = false;
+  bulkSelected.clear();
+  document.getElementById('bulk-bar').style.display = 'none';
+  document.getElementById('btn-bulk').style.display = '';
+  renderAll();
+}
+
+function toggleBulkSelect(id) {
+  if (bulkSelected.has(id)) bulkSelected.delete(id);
+  else bulkSelected.add(id);
+  updateBulkCount();
+  renderAll();
+}
+
+function updateBulkCount() {
+  const n = bulkSelected.size;
+  document.getElementById('bulk-count').textContent = n > 0 ? `${n} seleccionada${n>1?'s':''}` : 'Ninguna seleccionada';
+}
+
+async function bulkDelete() {
+  const ids = [...bulkSelected];
+  if (!ids.length) { toast('Selecciona al menos una tarjeta', 'info'); return; }
+  const names = ids.map(id => allData.find(o=>o.id===id)?.empresa || id).join(', ');
+  if (!confirm(`¿Borrar definitivamente ${ids.length} oportunidad${ids.length>1?'es':''}?\n\n${names}`)) return;
+  for (const id of ids) {
+    await deleteDoc_(id);
+  }
+  toast(`${ids.length} oportunidad${ids.length>1?'es borradas':' borrada'}`, 'success');
+  exitBulkMode();
+}
 
 function switchNegocio(id) {
   if (id === currentNegocio) return;
@@ -1471,11 +1531,13 @@ function renderCard(opp) {
   const noContact = opp.fechaContacto && daysBetween(opp.fechaContacto, today) > 14;
   const ticket = opp.ticketEstimado ? '€' + parseInt(opp.ticketEstimado).toLocaleString('es-ES') : '—';
   const initials = (opp.comercial || '?').substring(0, 2).toUpperCase();
-  return `<div class="card" id="card-${opp.id}"
-    draggable="true"
-    ondragstart="onDragStart(event,'${opp.id}')"
-    ondragend="onDragEnd(event)"
+  return `<div class="card ${bulkMode?'bulk-mode':''} ${bulkSelected.has(opp.id)?'bulk-selected':''}" id="card-${opp.id}"
+    draggable="${!bulkMode}"
+    ondragstart="${bulkMode?'':` onDragStart(event,'${opp.id}')`}"
+    ondragend="${bulkMode?'':'onDragEnd(event)'}"
+    onclick="${bulkMode?`toggleBulkSelect('${opp.id}')`:''}"
     style="border-left-color:${STAGE_MAP[opp.etapa]?.color || '#ccc'}">
+    <div class="bulk-check">${bulkSelected.has(opp.id)?'✓':''}</div>
     ${(overdue || noContact) ? '<div class="card-alert" title="Requiere atención"></div>' : ''}
     <div class="card-empresa">${esc(opp.empresa || 'Sin nombre')}</div>
     <div class="card-sector">${esc(opp.sector || '')} ${opp.solucion ? '· ' + esc(opp.solucion) : ''}</div>
@@ -1484,10 +1546,10 @@ function renderCard(opp) {
       <span class="card-comercial">${initials}</span>
       <span class="card-fecha">${opp.fechaAccion ? fmtDate(opp.fechaAccion) : (opp.proximaAccion ? esc(opp.proximaAccion).substring(0,20) : '')}</span>
     </div>
-    <div class="card-actions">
+    ${!bulkMode ? `<div class="card-actions">
       <button class="card-btn card-btn-edit" onclick="openEditModal('${opp.id}')">✏ Editar</button>
       <button class="card-btn card-btn-discard" onclick="event.stopPropagation(); quickDiscard('${opp.id}')">✕</button>
-    </div>
+    </div>` : ''}
   </div>`;
 }
 
