@@ -1131,14 +1131,14 @@ body {
         </div>
       </div>
       <hr style="margin:16px 0 12px;border:none;border-top:1px solid var(--gray-light);">
-      <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px;">🤖 Inteligencia Artificial (opcional)</div>
+      <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px;">🤖 Inteligencia Artificial — ChatGPT (opcional)</div>
       <div class="setup-step" style="margin-bottom:10px;">
-        Consigue tu API Key en <strong>console.anthropic.com</strong> → API Keys. Se usa solo localmente desde tu navegador para analizar prospectos.
+        Consigue tu API Key en <strong>platform.openai.com</strong> → API Keys. Se usa solo localmente desde tu navegador para analizar prospectos.
       </div>
       <div class="form-grid">
         <div class="form-group full">
-          <label>Claude API Key</label>
-          <input type="password" id="cfg-claude-key" placeholder="sk-ant-api03-...">
+          <label>OpenAI API Key</label>
+          <input type="password" id="cfg-claude-key" placeholder="sk-proj-...">
         </div>
       </div>
     </div>
@@ -2075,9 +2075,9 @@ async function analyzeWithAI() {
   const empresa = document.getElementById('f-empresa').value.trim();
   if (!empresa) { toast('Escribe el nombre de la empresa primero', 'error'); return; }
 
-  const claudeKey = localStorage.getItem('ningenia_claude_key');
-  if (!claudeKey) {
-    toast('Configura tu Claude API Key en ⚙ Configuración', 'error');
+  const apiKey = localStorage.getItem('ningenia_claude_key');
+  if (!apiKey) {
+    toast('Configura tu OpenAI API Key en ⚙ Configuración', 'error');
     openSetupModal();
     return;
   }
@@ -2103,7 +2103,7 @@ async function analyzeWithAI() {
 ${sector ? `Sector declarado: ${sector}` : ''}
 ${notas  ? `Notas adicionales: ${notas}` : ''}
 
-Analiza esta empresa y devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta (sin texto fuera del JSON):
+Analiza esta empresa y devuelve un objeto JSON con esta estructura exacta:
 {
   "resumen": "descripción breve de la empresa y su actividad en 2-3 frases",
   "oportunidades": ["oportunidad 1", "oportunidad 2", "oportunidad 3"],
@@ -2116,19 +2116,20 @@ Analiza esta empresa y devuelve ÚNICAMENTE un objeto JSON válido con esta estr
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': claudeKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-allow-browser': 'true',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'gpt-4o-mini',
         max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   }
+        ]
       })
     });
 
@@ -2138,10 +2139,10 @@ Analiza esta empresa y devuelve ÚNICAMENTE un objeto JSON válido con esta estr
     }
 
     const data = await resp.json();
-    const text = data.content?.[0]?.text || '';
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Respuesta inesperada de la IA');
-    const parsed = JSON.parse(jsonMatch[0]);
+    const text = data.choices?.[0]?.message?.content || '';
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { const m = text.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); else throw new Error('Respuesta inesperada de la IA'); }
     window.aiSuggestions = parsed;
 
     const fitColor = (parsed.probabilidad_fit||0) >= 7 ? '#27ae60' : (parsed.probabilidad_fit||0) >= 4 ? '#e67e22' : '#e74c3c';
