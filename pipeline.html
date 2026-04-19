@@ -2100,20 +2100,26 @@ async function analyzeWithAI() {
     : `Eres un consultor experto en productos ibéricos y charcutería para La Lonchería del Jamón. Analizas empresas (distribuidores, restaurantes, tiendas, maquileros) para identificar oportunidades de maquila o marca propia. Servicios: ${negocio.soluciones.join(', ')}. Tickets habituales entre 5.000€ y 80.000€.`;
 
   const userPrompt = `Empresa: "${empresa}"
-${sector ? `Sector declarado: ${sector}` : ''}
+${sector ? `Sector conocido: ${sector}` : ''}
 ${notas  ? `Notas adicionales: ${notas}` : ''}
 
-Analiza esta empresa y devuelve un objeto JSON con esta estructura exacta:
+Busca información real sobre esta empresa y rellena TODOS los campos posibles. Devuelve un JSON con esta estructura:
 {
-  "resumen": "descripción breve de la empresa y su actividad en 2-3 frases",
-  "oportunidades": ["oportunidad 1", "oportunidad 2", "oportunidad 3"],
-  "solucion_recomendada": "una de las soluciones disponibles que mejor encaje",
+  "sector": "sector real de la empresa (ej: Panadería industrial, Restauración, Distribución alimentaria...)",
+  "contacto": "nombre del director general, gerente o responsable de compras si lo conoces, si no deja vacío",
+  "cargo": "cargo del contacto (ej: Gerente, Director Comercial, CEO...)",
+  "telefono": "teléfono de la empresa si lo conoces, si no deja vacío",
+  "email": "email de contacto si lo conoces, si no deja vacío",
+  "notas": "descripción detallada: qué hace la empresa, cuántos empleados aproximados, facturación estimada, presencia geográfica, por qué encaja con ${negocio.nombre}",
+  "oportunidades": ["oportunidad comercial concreta 1", "oportunidad 2", "oportunidad 3"],
+  "solucion_recomendada": "la solución más adecuada de: ${negocio.soluciones.join(' / ')}",
   "ticket_estimado": 50000,
   "ticket_rango": "40.000€ – 70.000€",
-  "proxima_accion": "acción comercial concreta y específica recomendada como primer paso",
+  "proxima_accion": "primera acción comercial concreta y específica que debería hacer el comercial",
   "probabilidad_fit": 7,
-  "justificacion_ticket": "razón breve del ticket estimado"
-}`;
+  "justificacion_ticket": "razón del ticket estimado basada en el tamaño y actividad de la empresa"
+}
+Si no encuentras un dato, usa cadena vacía "" para textos y 0 para números. No inventes datos de contacto.`;
 
   try {
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -2145,8 +2151,23 @@ Analiza esta empresa y devuelve un objeto JSON con esta estructura exacta:
     catch { const m = text.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); else throw new Error('Respuesta inesperada de la IA'); }
     window.aiSuggestions = parsed;
 
+    // ── Auto-rellenar formulario inmediatamente ──
+    applyAISuggestions(parsed);
+
+    // ── Mostrar panel resumen ──
     const fitColor = (parsed.probabilidad_fit||0) >= 7 ? '#27ae60' : (parsed.probabilidad_fit||0) >= 4 ? '#e67e22' : '#e74c3c';
     const fitBg    = (parsed.probabilidad_fit||0) >= 7 ? '#eafaf1' : (parsed.probabilidad_fit||0) >= 4 ? '#fef5e7' : '#fdedec';
+
+    const filledFields = [
+      parsed.sector        ? '✓ Sector'    : '',
+      parsed.contacto      ? '✓ Contacto'  : '',
+      parsed.telefono      ? '✓ Teléfono'  : '',
+      parsed.email         ? '✓ Email'     : '',
+      parsed.ticket_estimado ? '✓ Ticket'  : '',
+      parsed.solucion_recomendada ? '✓ Solución' : '',
+      parsed.proxima_accion ? '✓ Próx. acción' : '',
+      '✓ Notas',
+    ].filter(Boolean);
 
     body.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
@@ -2161,14 +2182,13 @@ Analiza esta empresa y devuelve un objeto JSON con esta estructura exacta:
           <div style="font-size:11px;color:#7f8c8d;">Potencial de cierre</div>
         </div>
       </div>
-      <div style="margin-bottom:8px;font-size:12px;"><strong>📋 Empresa:</strong> ${esc(parsed.resumen||'')}</div>
-      <div style="margin-bottom:8px;font-size:12px;"><strong>💡 Solución:</strong> ${esc(parsed.solucion_recomendada||'')}</div>
+      <div style="margin-bottom:8px;font-size:12px;color:#1a6b3c;font-weight:700;">✅ Formulario rellenado automáticamente: ${filledFields.join(' · ')}</div>
       <div style="margin-bottom:8px;font-size:12px;"><strong>🎯 Oportunidades detectadas:</strong>
         <ul style="margin:4px 0 0 16px;line-height:1.8;">${(parsed.oportunidades||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
       </div>
-      <div style="margin-bottom:6px;font-size:12px;"><strong>⏭ Próxima acción:</strong> ${esc(parsed.proxima_accion||'')}</div>
-      <div style="font-size:11px;color:#7f8c8d;font-style:italic;">${esc(parsed.justificacion_ticket||'')}</div>
+      <div style="margin-bottom:4px;font-size:11px;color:#7f8c8d;font-style:italic;">${esc(parsed.justificacion_ticket||'')}</div>
     `;
+    toast('✅ Formulario rellenado con datos de la IA', 'success');
   } catch(err) {
     body.innerHTML = `<div style="color:#e74c3c;font-size:12px;padding:8px 0;">❌ Error: ${esc(err.message)}<br><small style="color:#95a5a6;">Verifica que la API Key sea correcta en ⚙ Configuración</small></div>`;
     toast('Error IA: ' + err.message, 'error');
@@ -2178,38 +2198,50 @@ Analiza esta empresa y devuelve un objeto JSON con esta estructura exacta:
   btn.textContent = '🤖 IA';
 }
 
-function applyAISuggestions() {
-  const s = window.aiSuggestions;
+function applyAISuggestions(s) {
+  if (!s) s = window.aiSuggestions;
   if (!s) return;
 
+  const set = (id, val) => { if (val) { const el = document.getElementById(id); if (el) el.value = val; } };
+
+  // Campos de texto
+  set('f-sector',        s.sector);
+  set('f-contacto',      s.contacto);
+  set('f-cargo',         s.cargo);
+  set('f-telefono',      s.telefono);
+  set('f-email',         s.email);
+  set('f-proxima-accion',s.proxima_accion);
+  set('f-notas',         s.notas);
+
+  // Ticket estimado
   if (s.ticket_estimado) {
-    document.getElementById('f-ticket').value = parseInt(s.ticket_estimado) || '';
+    const el = document.getElementById('f-ticket');
+    if (el) el.value = parseInt(s.ticket_estimado) || '';
   }
+
+  // Solución — busca la opción más parecida en el select
   if (s.solucion_recomendada) {
     const sel = document.getElementById('f-solucion');
     const target = s.solucion_recomendada.toLowerCase();
     let best = '';
     for (const opt of sel.options) {
-      if (opt.value && target.includes(opt.value.toLowerCase().split(' ')[0].toLowerCase())) {
+      if (!opt.value) continue;
+      const optLow = opt.value.toLowerCase();
+      // Coincidencia directa o por primera palabra significativa
+      if (target.includes(optLow.split(' ')[0]) || optLow.split(' ').some(w => w.length > 4 && target.includes(w))) {
         best = opt.value; break;
       }
     }
+    // Si no encontró coincidencia exacta, elige la primera opción no vacía
     if (!best) {
-      // Try reverse: option text includes first word of suggestion
-      for (const opt of sel.options) {
-        if (opt.value && opt.value.toLowerCase().split(' ').some(w => w.length > 4 && target.includes(w))) {
-          best = opt.value; break;
-        }
-      }
+      for (const opt of sel.options) { if (opt.value) { best = opt.value; break; } }
     }
     if (best) sel.value = best;
   }
-  if (s.proxima_accion) {
-    document.getElementById('f-proxima-accion').value = s.proxima_accion;
-  }
 
+  if (!s.sector) return; // ya fue aplicado desde analyzeWithAI automáticamente
   document.getElementById('ai-panel').style.display = 'none';
-  toast('✅ Sugerencias de IA aplicadas', 'success');
+  toast('✅ Formulario rellenado con datos de la IA', 'success');
 }
 </script>
 </body>
