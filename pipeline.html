@@ -1109,7 +1109,10 @@ body {
     <div class="login-error" id="login-error"></div>
   </div>
   <div class="login-footer">
-    <button onclick="openSetupModal()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 16px;border-radius:20px;cursor:pointer;font-size:12px;">⚙ Configurar Firebase</button>
+    <button onclick="
+      var sm = document.getElementById('setup-modal');
+      if(sm){ sm.classList.add('open'); sm.style.cssText='display:flex!important;z-index:9999!important;'; }
+    " style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 16px;border-radius:20px;cursor:pointer;font-size:12px;">⚙ Configurar Firebase</button>
   </div>
 </div>
 
@@ -2860,7 +2863,12 @@ function openSetupModal() {
       banner.style.display = 'none';
     }
   }
-  openModal('setup-modal');
+  const sm = document.getElementById('setup-modal');
+  if (sm) {
+    sm.classList.add('open');
+    sm.style.zIndex = '9999';
+    sm.style.display = 'flex';
+  }
 }
 
 async function syncLocalToFirebase() {
@@ -2930,9 +2938,13 @@ function useLocalMode() {
 // ══════════════════════════════════════
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  el.style.zIndex = '';
+  el.style.display = '';
   if (id === 'opp-modal') {
-    document.getElementById('opp-modal').classList.remove('view-mode');
+    el.classList.remove('view-mode');
     document.getElementById('btn-save').style.display = '';
     document.getElementById('btn-view-edit').style.display = 'none';
     document.getElementById('btn-record-call').style.display = 'none';
