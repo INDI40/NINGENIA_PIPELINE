@@ -640,6 +640,128 @@ body {
 #opp-modal.view-mode #btn-ai-analyze { display: none !important; }
 #opp-modal.view-mode #ai-panel { display: none !important; }
 
+/* ── RECORDING MODAL ── */
+#recording-modal .modal { max-width: 480px; }
+.rec-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.rec-empresa-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--blue-dark);
+}
+.rec-empresa-sub {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.rec-status-box {
+  background: #fff8f8;
+  border: 1px solid #f5c6cb;
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.rec-dot-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.rec-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #bdc3c7;
+}
+.rec-dot.recording {
+  background: var(--red);
+  animation: pulse-rec 1s ease-in-out infinite;
+}
+.rec-dot.processing {
+  background: var(--orange);
+  animation: spin-rec 1s linear infinite;
+}
+.rec-dot.done {
+  background: var(--green);
+}
+@keyframes pulse-rec {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.35); opacity: 0.7; }
+}
+@keyframes spin-rec {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.rec-timer {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+}
+.rec-timer.idle { color: var(--text-light); font-size: 20px; font-weight: 400; }
+.rec-status-text {
+  font-size: 13px;
+  color: var(--text-light);
+}
+.rec-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.rec-result-box {
+  display: none;
+  background: var(--blue-pale);
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.rec-result-box h4 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue-dark);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rec-transcript-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.rec-summary-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.rec-etapa-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.rec-etapa-row label { color: var(--text-light); white-space: nowrap; }
+.rec-etapa-row select { flex: 1; padding: 6px 8px; border: 1px solid var(--blue-light); border-radius: var(--radius-sm); font-size: 13px; }
+.rec-accion-row { margin-top: 10px; }
+.rec-accion-row label { font-size: 12px; color: var(--text-light); display: block; margin-bottom: 4px; }
+.rec-accion-row input { width: 100%; padding: 7px 10px; border: 1px solid var(--blue-light); border-radius: var(--radius-sm); font-size: 13px; }
+
 /* ── FIREBASE SETUP MODAL ── */
 #setup-modal .modal { max-width: 520px; }
 .setup-step {
@@ -1102,10 +1224,62 @@ body {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('opp-modal')">Cerrar</button>
+      <button class="btn" id="btn-record-call" style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:white;display:none;" onclick="openRecordingModal()">🎙 Grabar llamada</button>
       <button class="btn btn-danger" id="btn-discard" style="display:none;" onclick="discardOportunidad()">Descartar</button>
       <button class="btn btn-success" id="btn-cerrar" style="display:none;" onclick="cerrarOportunidad()">Marcar como Cerrado</button>
       <button class="btn btn-primary" id="btn-view-edit" style="display:none;" onclick="switchToEditMode()">✏ Editar ficha</button>
       <button class="btn btn-primary" id="btn-save" onclick="saveOportunidad()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECORDING MODAL -->
+<div class="modal-overlay" id="recording-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h2>🎙 Grabar Llamada</h2>
+      <button class="modal-close" onclick="closeRecordingModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="rec-header">
+        <div>
+          <div class="rec-empresa-name" id="rec-empresa-name">—</div>
+          <div class="rec-empresa-sub" id="rec-empresa-sub"></div>
+        </div>
+      </div>
+
+      <div class="rec-status-box">
+        <div class="rec-dot-wrap"><div class="rec-dot" id="rec-dot"></div></div>
+        <div class="rec-timer idle" id="rec-timer">Listo para grabar</div>
+        <div class="rec-status-text" id="rec-status-text">Pulsa «Iniciar grabación» cuando comience la llamada</div>
+      </div>
+
+      <div class="rec-controls">
+        <button class="btn btn-success" id="rec-btn-start" onclick="startRecording()">⏺ Iniciar grabación</button>
+        <button class="btn btn-danger"  id="rec-btn-stop"  onclick="stopRecording()"  style="display:none;">⏹ Detener y analizar</button>
+      </div>
+
+      <!-- Result area (shown after analysis) -->
+      <div class="rec-result-box" id="rec-result-box">
+        <h4>📝 Transcripción</h4>
+        <div class="rec-transcript-text" id="rec-transcript-text"></div>
+        <h4 style="margin-top:12px;">🤖 Resumen ejecutivo</h4>
+        <div class="rec-summary-text" id="rec-summary-text"></div>
+        <div class="rec-etapa-row">
+          <label>Cambiar etapa a:</label>
+          <select id="rec-etapa-select">
+            <option value="">— sin cambio —</option>
+          </select>
+        </div>
+        <div class="rec-accion-row">
+          <label>Próxima acción sugerida:</label>
+          <input type="text" id="rec-proxima-accion" placeholder="Ej: Enviar propuesta el lunes">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeRecordingModal()">Cerrar</button>
+      <button class="btn btn-primary" id="rec-btn-save" style="display:none;" onclick="saveCallToHistory()">💾 Guardar en historial</button>
     </div>
   </div>
 </div>
@@ -1817,6 +1991,8 @@ function openAddModal() {
   clearForm();
   document.getElementById('btn-discard').style.display = 'none';
   document.getElementById('btn-cerrar').style.display = 'none';
+  document.getElementById('btn-record-call').style.display = 'none';
+  document.getElementById('btn-view-edit').style.display = 'none';
   document.getElementById('historial-title').style.display = 'none';
   document.getElementById('modal-historial').style.display = 'none';
   document.getElementById('add-nota-row').style.display = 'none';
@@ -1842,6 +2018,7 @@ function openViewModal(id) {
   document.getElementById('btn-cerrar').style.display = 'none';
   document.getElementById('btn-save').style.display = 'none';
   document.getElementById('btn-view-edit').style.display = 'inline-flex';
+  document.getElementById('btn-record-call').style.display = 'inline-flex';
   document.getElementById('add-nota-row').style.display = 'none';
 
   // Show historial
@@ -1877,6 +2054,8 @@ function openEditModal(id, forceCierre = false) {
   if (forceCierre) { document.getElementById('f-etapa').value = 'cerrado'; toggleCierreSection(); }
   document.getElementById('btn-discard').style.display = opp.etapa !== 'descartado' ? 'inline-flex' : 'none';
   document.getElementById('btn-cerrar').style.display = opp.etapa !== 'cerrado' ? 'inline-flex' : 'none';
+  document.getElementById('btn-record-call').style.display = 'inline-flex';
+  document.getElementById('btn-view-edit').style.display = 'none';
   // Historial
   if (opp.historial && opp.historial.length > 0) {
     document.getElementById('historial-title').style.display = 'block';
@@ -1893,7 +2072,9 @@ function openEditModal(id, forceCierre = false) {
 
 function historialText(h) {
   if (h.tipo === 'cambio_etapa') return `${h.comercial||''} movió de ${STAGE_MAP[h.etapaAnterior]?.label||h.etapaAnterior} → ${STAGE_MAP[h.etapaNueva]?.label||h.etapaNueva}${h.nota?' · '+h.nota:''}`;
-  if (h.tipo === 'nota') return `📝 ${h.comercial||''}: ${h.nota}`;
+  if (h.tipo === 'nota')    return `📝 ${h.comercial||''}: ${h.nota}`;
+  if (h.tipo === 'llamada') return h.nota || '📞 Llamada grabada';
+  if (h.tipo === 'email')   return h.nota || '📧 Email recibido';
   return h.nota || JSON.stringify(h);
 }
 
@@ -2126,6 +2307,7 @@ function closeModal(id) {
     document.getElementById('opp-modal').classList.remove('view-mode');
     document.getElementById('btn-save').style.display = '';
     document.getElementById('btn-view-edit').style.display = 'none';
+    document.getElementById('btn-record-call').style.display = 'none';
   }
 }
 
@@ -2586,6 +2768,317 @@ function applyAISuggestions(s) {
   if (!s.sector) return; // ya fue aplicado desde analyzeWithAI automáticamente
   document.getElementById('ai-panel').style.display = 'none';
   toast('✅ Formulario rellenado con datos de la IA', 'success');
+}
+
+// ══════════════════════════════════════════════════════
+// CALL RECORDING
+// ══════════════════════════════════════════════════════
+let recMediaRecorder  = null;
+let recAudioChunks    = [];
+let recTimerInterval  = null;
+let recSeconds        = 0;
+let recCurrentOppId   = null;
+let recTranscription  = '';
+let recSummary        = '';
+
+function openRecordingModal() {
+  if (!editingId) return;
+  const opp = allData.find(o => o.id === editingId);
+  if (!opp) return;
+
+  recCurrentOppId = editingId;
+  recTranscription = '';
+  recSummary = '';
+
+  // Reset UI
+  document.getElementById('rec-empresa-name').textContent = opp.empresa;
+  document.getElementById('rec-empresa-sub').textContent  = (opp.contacto ? opp.contacto : '') + (opp.telefono ? ' · ' + opp.telefono : '');
+  _recSetIdle();
+  document.getElementById('rec-result-box').style.display = 'none';
+  document.getElementById('rec-btn-save').style.display   = 'none';
+  document.getElementById('rec-btn-start').style.display  = 'inline-flex';
+  document.getElementById('rec-btn-stop').style.display   = 'none';
+
+  // Populate etapa select
+  const sel = document.getElementById('rec-etapa-select');
+  sel.innerHTML = '<option value="">— sin cambio —</option>';
+  stagesActive().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.label;
+    sel.appendChild(opt);
+  });
+
+  openModal('recording-modal');
+}
+
+function closeRecordingModal() {
+  // Stop recording if active
+  if (recMediaRecorder && recMediaRecorder.state === 'recording') {
+    recMediaRecorder.stop();
+  }
+  _recStopTimer();
+  closeModal('recording-modal');
+}
+
+async function startRecording() {
+  const apiKey = localStorage.getItem('ningenia_claude_key') || '';
+  if (!apiKey) {
+    toast('⚠️ Configura tu OpenAI API Key en ⚙ Configuración', 'error');
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recAudioChunks = [];
+
+    // Prefer webm/opus, fallback to default
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : '';
+
+    recMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+    recMediaRecorder.ondataavailable = e => {
+      if (e.data && e.data.size > 0) recAudioChunks.push(e.data);
+    };
+
+    recMediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const mType = recMediaRecorder.mimeType || 'audio/webm';
+      const blob = new Blob(recAudioChunks, { type: mType });
+      await _recProcessAudio(blob);
+    };
+
+    recMediaRecorder.start(500); // collect data every 500ms
+
+    // Update UI
+    document.getElementById('rec-btn-start').style.display = 'none';
+    document.getElementById('rec-btn-stop').style.display  = 'inline-flex';
+    document.getElementById('rec-dot').className = 'rec-dot recording';
+    document.getElementById('rec-timer').className = 'rec-timer';
+    document.getElementById('rec-status-text').textContent = '🔴 Grabando... Habla cerca del micrófono';
+
+    recSeconds = 0;
+    _recStartTimer();
+
+  } catch (err) {
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      toast('❌ Permiso de micrófono denegado. Actívalo en los ajustes del navegador.', 'error');
+    } else {
+      toast('❌ No se pudo acceder al micrófono: ' + err.message, 'error');
+    }
+  }
+}
+
+function stopRecording() {
+  if (recMediaRecorder && recMediaRecorder.state === 'recording') {
+    _recStopTimer();
+    document.getElementById('rec-btn-stop').style.display  = 'none';
+    document.getElementById('rec-btn-start').style.display = 'none';
+    document.getElementById('rec-dot').className = 'rec-dot processing';
+    document.getElementById('rec-timer').textContent = '⏳ Procesando...';
+    document.getElementById('rec-status-text').textContent = 'Transcribiendo con Whisper...';
+    recMediaRecorder.stop();
+  }
+}
+
+async function _recProcessAudio(blob) {
+  const apiKey = localStorage.getItem('ningenia_claude_key') || '';
+
+  // Step 1: Transcribe with Whisper
+  document.getElementById('rec-status-text').textContent = '🔤 Transcribiendo con Whisper AI...';
+
+  let transcription = '';
+  try {
+    const formData = new FormData();
+    // Whisper accepts webm; determine extension from blob type
+    const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+    formData.append('file', blob, `grabacion.${ext}`);
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'es');
+    formData.append('response_format', 'text');
+
+    const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      body: formData
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+    }
+    transcription = (await resp.text()).trim();
+  } catch (e) {
+    document.getElementById('rec-dot').className = 'rec-dot';
+    document.getElementById('rec-timer').className = 'rec-timer idle';
+    document.getElementById('rec-timer').textContent = '❌ Error';
+    document.getElementById('rec-status-text').textContent = 'Error en transcripción: ' + e.message;
+    toast('❌ Whisper: ' + e.message, 'error');
+    document.getElementById('rec-btn-start').style.display = 'inline-flex';
+    return;
+  }
+
+  recTranscription = transcription;
+  document.getElementById('rec-status-text').textContent = '🤖 Analizando con GPT...';
+
+  // Step 2: Summarize with GPT
+  const opp = allData.find(o => o.id === recCurrentOppId) || {};
+  const validStages = stagesActive().map(s => `${s.id} (${s.label})`).join(', ');
+
+  let summary = '';
+  let nextAction = '';
+  let suggestedStage = '';
+
+  try {
+    const messages = [
+      {
+        role: 'system',
+        content: 'Eres un asistente comercial experto. Analiza transcripciones de llamadas de ventas y extrae información clave. Responde solo con JSON válido.'
+      },
+      {
+        role: 'user',
+        content: `CONTEXTO DEL PROSPECTO:
+Empresa: ${opp.empresa || ''}
+Etapa actual: ${opp.etapa || ''}
+Sector: ${opp.sector || ''}
+Notas previas: ${(opp.notas || '').substring(0, 300)}
+
+TRANSCRIPCIÓN DE LA LLAMADA:
+${transcription}
+
+ETAPAS VÁLIDAS DEL PIPELINE: ${validStages}
+
+Devuelve un JSON con este formato exacto:
+{
+  "resumen": "Resumen ejecutivo de la llamada en 3-4 frases. Qué se habló, tono del cliente, compromisos alcanzados.",
+  "proxima_accion": "Acción concreta y específica que debe hacer el comercial (ej: Enviar propuesta el lunes 21/04)",
+  "etapa_sugerida": "id-de-etapa-válida O null si no hay cambio claro",
+  "tono_cliente": "positivo | neutral | negativo | interesado | dudoso"
+}`
+      }
+    ];
+
+    const resp2 = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', max_tokens: 600, response_format: { type: 'json_object' }, messages })
+    });
+
+    if (!resp2.ok) {
+      const err = await resp2.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${resp2.status}`);
+    }
+
+    const data2 = await resp2.json();
+    const parsed = JSON.parse(data2.choices[0].message.content);
+    summary     = parsed.resumen       || '';
+    nextAction  = parsed.proxima_accion || '';
+    suggestedStage = parsed.etapa_sugerida || '';
+
+  } catch (e) {
+    summary = '(No se pudo generar resumen automático)';
+    toast('⚠️ GPT no pudo analizar: ' + e.message, 'info');
+  }
+
+  recSummary = summary;
+
+  // Update UI with results
+  document.getElementById('rec-dot').className = 'rec-dot done';
+  document.getElementById('rec-timer').className = 'rec-timer idle';
+  document.getElementById('rec-timer').textContent = '✅ Análisis completado';
+  document.getElementById('rec-status-text').textContent = `Duración: ${_recFmtTime(recSeconds)}`;
+
+  document.getElementById('rec-transcript-text').textContent = transcription;
+  document.getElementById('rec-summary-text').textContent    = summary;
+
+  if (nextAction)    document.getElementById('rec-proxima-accion').value = nextAction;
+  if (suggestedStage) {
+    const sel = document.getElementById('rec-etapa-select');
+    for (const opt of sel.options) {
+      if (opt.value === suggestedStage) { sel.value = suggestedStage; break; }
+    }
+  }
+
+  document.getElementById('rec-result-box').style.display  = 'block';
+  document.getElementById('rec-btn-save').style.display    = 'inline-flex';
+  document.getElementById('rec-btn-start').style.display   = 'inline-flex';
+  document.getElementById('rec-btn-start').textContent     = '🔄 Nueva grabación';
+}
+
+async function saveCallToHistory() {
+  if (!recCurrentOppId) return;
+  const opp = allData.find(o => o.id === recCurrentOppId);
+  if (!opp) return;
+
+  const proxima   = document.getElementById('rec-proxima-accion').value.trim();
+  const etapaNueva = document.getElementById('rec-etapa-select').value;
+
+  // Build historial entry
+  const entry = {
+    fecha:        today(),
+    tipo:         'llamada',
+    nota:         `📞 Llamada grabada · Duración: ${_recFmtTime(recSeconds)}\n\n${recSummary}${recTranscription ? '\n\n📝 Transcripción:\n' + recTranscription.substring(0, 800) : ''}`,
+    comercial:    opp.comercial || ''
+  };
+
+  const updated = { ...opp };
+  updated.historial = [entry, ...(opp.historial || [])];
+
+  if (proxima) updated.proximaAccion = proxima;
+
+  if (etapaNueva && etapaNueva !== opp.etapa) {
+    updated.historial.unshift({
+      fecha:         today(),
+      tipo:          'cambio_etapa',
+      etapaAnterior: opp.etapa,
+      etapaNueva:    etapaNueva,
+      nota:          'Actualizado tras llamada grabada',
+      comercial:     opp.comercial || ''
+    });
+    updated.etapa = etapaNueva;
+  }
+
+  await saveDoc(updated);
+  closeRecordingModal();
+  toast('✅ Llamada guardada en el historial', 'success');
+
+  // Refresh the view modal if it's open
+  if (document.getElementById('opp-modal').classList.contains('open')) {
+    const viewMode = document.getElementById('opp-modal').classList.contains('view-mode');
+    closeModal('opp-modal');
+    setTimeout(() => viewMode ? openViewModal(recCurrentOppId) : openEditModal(recCurrentOppId), 80);
+  }
+}
+
+function _recStartTimer() {
+  _recStopTimer();
+  recTimerInterval = setInterval(() => {
+    recSeconds++;
+    document.getElementById('rec-timer').textContent = _recFmtTime(recSeconds);
+  }, 1000);
+}
+
+function _recStopTimer() {
+  if (recTimerInterval) { clearInterval(recTimerInterval); recTimerInterval = null; }
+}
+
+function _recFmtTime(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function _recSetIdle() {
+  document.getElementById('rec-dot').className         = 'rec-dot';
+  document.getElementById('rec-timer').className       = 'rec-timer idle';
+  document.getElementById('rec-timer').textContent     = 'Listo para grabar';
+  document.getElementById('rec-status-text').textContent = 'Pulsa «Iniciar grabación» cuando comience la llamada';
+  recSeconds = 0;
+  _recStopTimer();
 }
 </script>
 </body>
