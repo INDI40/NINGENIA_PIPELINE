@@ -735,6 +735,7 @@ body {
 .btn-user-role   { background: var(--blue-pale);  color: var(--blue-dark); }
 
 /* first-admin modal */
+#first-admin-modal { z-index: 9500; }
 #first-admin-modal .modal { max-width: 420px; }
 
 /* ── RECORDING MODAL (flotante y arrastrable) ── */
@@ -892,6 +893,7 @@ body {
 .rec-accion-row input { width: 100%; padding: 7px 10px; border: 1px solid var(--blue-light); border-radius: var(--radius-sm); font-size: 13px; }
 
 /* ── FIREBASE SETUP MODAL ── */
+#setup-modal { z-index: 9500; } /* por encima de la pantalla de login (9000) */
 #setup-modal .modal { max-width: 520px; }
 .setup-step {
   background: var(--blue-pale);
