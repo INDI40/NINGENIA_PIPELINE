@@ -640,8 +640,40 @@ body {
 #opp-modal.view-mode #btn-ai-analyze { display: none !important; }
 #opp-modal.view-mode #ai-panel { display: none !important; }
 
-/* ── RECORDING MODAL ── */
-#recording-modal .modal { max-width: 480px; }
+/* ── RECORDING MODAL (flotante y arrastrable) ── */
+#recording-modal {
+  pointer-events: none;   /* el overlay no bloquea el fondo */
+  background: transparent !important;
+  z-index: 1100;          /* por encima del modal de ficha (1000) */
+}
+#recording-modal.open { display: flex; align-items: flex-start; justify-content: flex-end; }
+#recording-modal .modal {
+  pointer-events: all;
+  max-width: 420px;
+  width: calc(100vw - 32px);
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  margin: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius);
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  user-select: none;
+  animation: none;   /* no slideUp — ya tiene posición fija */
+}
+#recording-modal .modal-header {
+  cursor: grab;
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: white;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 10px 16px;
+}
+#recording-modal .modal-header:active { cursor: grabbing; }
+#recording-modal .modal-header h2 { color: white; font-size: 15px; }
+#recording-modal .modal-close { color: white; opacity: 0.85; }
+#recording-modal .modal-close:hover { opacity: 1; background: rgba(0,0,0,0.15); }
 .rec-header {
   display: flex;
   align-items: center;
@@ -870,7 +902,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(30,78,121,0.08);
+  transition: box-shadow 0.15s;
 }
+.mobile-card:active { box-shadow: var(--shadow-lg); background: #f8fbff; }
 .mobile-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .mobile-card-empresa { font-weight: 700; font-size: 15px; color: var(--blue-dark); }
 .mobile-card-ticket { font-weight: 800; font-size: 16px; color: var(--text); }
@@ -936,6 +972,16 @@ body {
   #setup-modal .modal-overlay { align-items: center; padding: 16px; }
   #setup-modal .modal { border-radius: var(--radius); }
 
+  /* Recording modal — mantener flotante en móvil */
+  #recording-modal .modal {
+    max-width: calc(100vw - 24px);
+    width: calc(100vw - 24px);
+    right: 12px;
+    top: 62px;
+    border-radius: var(--radius);
+    max-height: 70vh;
+  }
+
   /* Toast */
   #toast-container { bottom: 12px; right: 12px; left: 12px; }
   .toast { max-width: 100%; }
@@ -954,8 +1000,9 @@ body {
     <div id="sync-dot"></div>
     <span id="sync-label">Iniciando...</span>
   </div>
-  <div id="email-sync-indicator" style="display:none;font-size:11px;background:rgba(255,255,255,0.15);border-radius:4px;padding:3px 8px;cursor:pointer;" onclick="showEmailSyncLog()" title="Ver emails procesados">
-    <span id="email-sync-text">📧 ...</span>
+  <div id="email-sync-indicator" style="display:none;font-size:11px;background:rgba(255,255,255,0.15);border-radius:4px;padding:3px 8px;display:none;align-items:center;gap:6px;" title="Ver emails procesados">
+    <span id="email-sync-text" style="cursor:pointer;" onclick="showEmailSyncLog()">📧 ...</span>
+    <span onclick="forceSyncEmail()" title="Sincronizar ahora" style="cursor:pointer;opacity:0.7;font-size:13px;line-height:1;" id="email-sync-refresh">🔄</span>
   </div>
   <div class="header-actions">
     <button class="btn-icon" onclick="location.href='agenda.html'">📅 Agenda</button>
@@ -1583,7 +1630,7 @@ async function initFirebase() {
       applyFilters();
       renderAll();
       // Sync email once after first data load
-      setTimeout(syncEmail, 1200);
+      if (!emailSyncTimer) setTimeout(startEmailSyncLoop, 1200);
     }, err => {
       const msg = err.code === 'permission-denied'
         ? 'Sin permisos en Firestore. Ve a Firebase → Firestore → Reglas y pon: allow read, write: if true;'
@@ -1619,7 +1666,7 @@ function loadLocal() {
   allData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
   applyFilters();
   renderAll();
-  setTimeout(syncEmail, 1200);
+  if (!emailSyncTimer) setTimeout(startEmailSyncLoop, 1200);
 }
 
 async function saveDoc(opp) {
@@ -1736,7 +1783,7 @@ function renderMobileKanban() {
       const overdue = opp.fechaAccion && opp.fechaAccion < todayStr;
       const ticket = opp.ticketEstimado ? '€' + parseInt(opp.ticketEstimado).toLocaleString('es-ES') : '—';
       const stColor = STAGE_MAP[opp.etapa]?.color || 'var(--blue-mid)';
-      return `<div class="mobile-card" style="border-left-color:${stColor}">
+      return `<div class="mobile-card" style="border-left-color:${stColor}" onclick="openViewModal('${opp.id}')">
         <div class="mobile-card-top">
           <div class="mobile-card-empresa">${esc(opp.empresa || 'Sin nombre')}</div>
           <div class="mobile-card-ticket">${ticket}</div>
@@ -1745,11 +1792,12 @@ function renderMobileKanban() {
           <span class="mobile-card-sector">${esc(opp.sector || '—')}</span>
           <span class="mobile-card-comercial">${esc(opp.comercial || '—')}</span>
         </div>
+        ${opp.contacto ? `<div class="mobile-card-accion">👤 ${esc(opp.contacto)}${opp.cargo ? ' · '+esc(opp.cargo) : ''}${opp.telefono ? ' · 📞 '+esc(opp.telefono) : ''}</div>` : ''}
         ${opp.proximaAccion ? `<div class="mobile-card-accion">📌 ${esc(opp.proximaAccion)}${opp.fechaAccion ? ' · ' + fmtDate(opp.fechaAccion) : ''}</div>` : ''}
         ${overdue ? `<div class="mobile-card-alert">⚠ Acción vencida — ${fmtDate(opp.fechaAccion)}</div>` : ''}
         <div class="mobile-card-actions">
-          <button class="mobile-btn-edit" onclick="openEditModal('${opp.id}')">✏ Editar</button>
-          <button class="mobile-btn-discard" onclick="quickDiscard('${opp.id}')">✕ Descartar</button>
+          <button class="mobile-btn-edit" onclick="event.stopPropagation();openEditModal('${opp.id}')">✏ Editar</button>
+          <button class="mobile-btn-discard" onclick="event.stopPropagation();quickDiscard('${opp.id}')">✕ Descartar</button>
         </div>
       </div>`;
     }).join('');
@@ -2355,27 +2403,34 @@ initFirebase();
 // ══════════════════════════════════════
 // EMAIL SYNC
 // ══════════════════════════════════════
-const EMAIL_SYNC_URL   = 'http://localhost:8765';
-let   emailSyncDone    = false;
-let   emailSyncLog     = [];
+const EMAIL_SYNC_URL      = 'http://localhost:8765';
+const EMAIL_SYNC_INTERVAL = 10 * 60 * 1000; // 10 minutos
+let   emailSyncRunning    = false;  // evita solapamiento si tarda mucho
+let   emailSyncLog        = [];
+let   emailSyncTimer      = null;
+
+function startEmailSyncLoop() {
+  syncEmail();                                       // primera vez al arrancar
+  emailSyncTimer = setInterval(syncEmail, EMAIL_SYNC_INTERVAL);
+}
 
 async function syncEmail() {
-  if (emailSyncDone) return;
-  emailSyncDone = true;
+  if (emailSyncRunning) return;   // ya hay una en curso, no solapar
+  emailSyncRunning = true;
 
   const emailPass = localStorage.getItem('ningenia_email_pass');
   const openaiKey = localStorage.getItem('ningenia_claude_key');
-  if (!emailPass || !openaiKey) return; // No configurado — silencioso
+  if (!emailPass || !openaiKey) { emailSyncRunning = false; return; }
 
   // Verificar que el servidor local está corriendo
   const indicator = document.getElementById('email-sync-indicator');
   const syncText  = document.getElementById('email-sync-text');
   try {
     const ping = await fetch(EMAIL_SYNC_URL + '/ping', { signal: AbortSignal.timeout(1500) });
-    if (!ping.ok) return;
+    if (!ping.ok) { emailSyncRunning = false; return; }
   } catch {
     // Servidor no activo — no mostrar error, silencioso
-    return;
+    emailSyncRunning = false; return;
   }
 
   // Mostrar indicador
@@ -2404,16 +2459,18 @@ async function syncEmail() {
       syncText.textContent = '📧 ⚠ Error';
       indicator.title = result.error || 'Error desconocido';
       toast('📧 Error sync correo: ' + (result.error || 'Error'), 'error');
-      return;
+      emailSyncRunning = false; return;
     }
 
     const updates = result.updates || [];
     emailSyncLog  = updates;
 
     if (updates.length === 0) {
-      syncText.textContent = `📧 Sin novedades`;
-      indicator.title = result.msg || 'Sin emails nuevos relacionados';
-      return;
+      const hhmm = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      syncText.textContent = `📧 Sin novedades · ${hhmm}`;
+      indicator.title = (result.msg || 'Sin emails nuevos relacionados') + ' — próxima revisión en 10 min';
+      indicator.style.display = 'block';
+      emailSyncRunning = false; return;
     }
 
     // Aplicar actualizaciones a Firebase
@@ -2466,8 +2523,9 @@ async function syncEmail() {
       applied++;
     }
 
-    syncText.textContent = `📧 ${applied} ficha${applied !== 1 ? 's' : ''} actualizada${applied !== 1 ? 's' : ''}`;
-    indicator.title = `${result.msg} — Pulsa para ver el detalle`;
+    const hhmm2 = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    syncText.textContent = `📧 ${applied} actualizada${applied !== 1 ? 's' : ''} · ${hhmm2}`;
+    indicator.title = `${result.msg} — Pulsa para ver el detalle — próxima revisión en 10 min`;
     indicator.style.background = 'rgba(39,174,96,0.3)';
 
     toast(`📧 ${applied} ficha${applied!==1?'s':''} actualizada${applied!==1?'s':''} desde el correo`, 'success');
@@ -2475,7 +2533,18 @@ async function syncEmail() {
   } catch (err) {
     syncText.textContent = '📧 ⚠';
     indicator.title = 'Error: ' + err.message;
+  } finally {
+    emailSyncRunning = false;
   }
+}
+
+function forceSyncEmail() {
+  const btn = document.getElementById('email-sync-refresh');
+  if (btn) { btn.style.animation = 'spin-rec 0.8s linear infinite'; btn.style.display = 'inline-block'; }
+  emailSyncRunning = false;  // forzar aunque esté en curso
+  syncEmail().then(() => {
+    if (btn) btn.style.animation = '';
+  });
 }
 
 function showEmailSyncLog() {
@@ -2809,6 +2878,10 @@ function openRecordingModal() {
     sel.appendChild(opt);
   });
 
+  // Reset posición al esquina superior derecha
+  const modalEl = document.querySelector('#recording-modal .modal');
+  if (modalEl) { modalEl.style.left = ''; modalEl.style.top = '72px'; modalEl.style.right = '16px'; }
+
   openModal('recording-modal');
 }
 
@@ -3080,6 +3153,70 @@ function _recSetIdle() {
   recSeconds = 0;
   _recStopTimer();
 }
+
+// ══════════════════════════════════════
+// DRAG PARA MODAL DE GRABACIÓN
+// ══════════════════════════════════════
+(function initRecordingDrag() {
+  let dragEl = null, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+
+  function getModal() { return document.querySelector('#recording-modal .modal'); }
+
+  function onStart(e) {
+    // Solo arrastra si el origen es el header
+    if (!e.target.closest('#recording-modal .modal-header')) return;
+    // No iniciar arrastre en el botón cerrar
+    if (e.target.closest('.modal-close')) return;
+
+    dragEl = getModal();
+    const rect = dragEl.getBoundingClientRect();
+    // Fijamos la posición como left/top absolutos (quitamos right)
+    dragEl.style.right  = 'auto';
+    dragEl.style.left   = rect.left + 'px';
+    dragEl.style.top    = rect.top  + 'px';
+
+    const point = e.touches ? e.touches[0] : e;
+    startX  = point.clientX;
+    startY  = point.clientY;
+    origLeft = rect.left;
+    origTop  = rect.top;
+
+    e.preventDefault();
+    document.addEventListener('mousemove', onMove, { passive: false });
+    document.addEventListener('mouseup',   onEnd);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend',  onEnd);
+  }
+
+  function onMove(e) {
+    if (!dragEl) return;
+    e.preventDefault();
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - startX;
+    const dy = point.clientY - startY;
+    const newLeft = Math.max(0, Math.min(origLeft + dx, window.innerWidth  - dragEl.offsetWidth));
+    const newTop  = Math.max(0, Math.min(origTop  + dy, window.innerHeight - dragEl.offsetHeight));
+    dragEl.style.left = newLeft + 'px';
+    dragEl.style.top  = newTop  + 'px';
+  }
+
+  function onEnd() {
+    dragEl = null;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend',  onEnd);
+  }
+
+  // Adjuntar al header cuando el DOM está listo
+  document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('recording-modal');
+    if (overlay) {
+      overlay.addEventListener('mousedown',  onStart);
+      overlay.addEventListener('touchstart', onStart, { passive: false });
+    }
+  });
+})();
 </script>
 </body>
 </html>
