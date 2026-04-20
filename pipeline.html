@@ -640,6 +640,103 @@ body {
 #opp-modal.view-mode #btn-ai-analyze { display: none !important; }
 #opp-modal.view-mode #ai-panel { display: none !important; }
 
+/* ── LOGIN SCREEN ── */
+#login-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #1F4E79 0%, #2E75B6 100%);
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+#login-screen.visible { display: flex; }
+.login-box {
+  background: white;
+  border-radius: 12px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  animation: slideUp 0.35s ease;
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.login-logo .login-icon { font-size: 36px; display: block; margin-bottom: 8px; }
+.login-logo h1 { font-size: 20px; color: var(--blue-dark); font-weight: 800; margin-bottom: 2px; }
+.login-logo p  { font-size: 13px; color: var(--text-light); }
+.login-field { margin-bottom: 16px; }
+.login-field label { display: block; font-size: 12px; font-weight: 700; color: var(--text-light); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.login-field input { width: 100%; padding: 11px 14px; border: 1.5px solid #d0d7de; border-radius: var(--radius-sm); font-size: 14px; color: var(--text); transition: border-color 0.2s; }
+.login-field input:focus { outline: none; border-color: var(--blue-mid); }
+.login-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid)); color: white; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
+.login-btn:hover { opacity: 0.9; }
+.login-btn:disabled { opacity: 0.6; cursor: default; }
+.login-error { background: #fdedec; border: 1px solid #f5c6cb; color: #c0392b; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; margin-top: 14px; display: none; }
+.login-error.visible { display: block; }
+.login-footer { text-align: center; margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.6); }
+
+/* ── HEADER USER INFO ── */
+#header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+}
+#header-user .user-avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 11px; color: white;
+  flex-shrink: 0;
+}
+#header-user .user-name { font-weight: 600; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#header-user .user-rol  { font-size: 10px; opacity: 0.7; }
+
+/* ── USERS MODAL ── */
+#users-modal .modal { max-width: 620px; }
+.user-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gray-light);
+}
+.user-list-item:last-child { border-bottom: none; }
+.user-avatar-md {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--blue-mid);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-info-name  { font-weight: 700; font-size: 14px; color: var(--text); }
+.user-info-email { font-size: 12px; color: var(--text-light); }
+.user-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.user-badge.admin    { background: #fdebd0; color: #e67e22; }
+.user-badge.comercial{ background: var(--blue-pale); color: var(--blue-dark); }
+.user-badge.inactivo { background: var(--gray-light); color: var(--gray); }
+.user-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.user-actions button { font-size: 11px; padding: 4px 10px; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; }
+.btn-user-toggle { background: var(--gray-light); color: var(--text); }
+.btn-user-role   { background: var(--blue-pale);  color: var(--blue-dark); }
+
+/* first-admin modal */
+#first-admin-modal .modal { max-width: 420px; }
+
 /* ── RECORDING MODAL (flotante y arrastrable) ── */
 #recording-modal {
   pointer-events: none;   /* el overlay no bloquea el fondo */
@@ -990,6 +1087,98 @@ body {
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="login-icon">⬡</span>
+      <h1>Pipeline Comercial</h1>
+      <p>Ningenia · La Lonchería del Jamón</p>
+    </div>
+    <div class="login-field">
+      <label>Correo electrónico</label>
+      <input type="email" id="login-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Iniciar sesión</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+  <div class="login-footer">
+    <button onclick="openSetupModal()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 16px;border-radius:20px;cursor:pointer;font-size:12px;">⚙ Configurar Firebase</button>
+  </div>
+</div>
+
+<!-- FIRST ADMIN SETUP MODAL -->
+<div class="modal-overlay" id="first-admin-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h2>👑 Configurar primer administrador</h2>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text-light);margin-bottom:20px;">
+        Eres el primer usuario del sistema. Introduce tu nombre para configurarte como administrador.
+      </p>
+      <div class="form-group">
+        <label>Tu nombre completo</label>
+        <input type="text" id="first-admin-name" placeholder="Ej: David Garrido" onkeydown="if(event.key==='Enter')createFirstAdmin()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="createFirstAdmin()">✅ Confirmar y entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- USERS MODAL (admin only) -->
+<div class="modal-overlay" id="users-modal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h2>👥 Gestión de Usuarios</h2>
+      <button class="modal-close" onclick="closeModal('users-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Create user form -->
+      <div style="background:var(--blue-pale);border:1px solid var(--blue-light);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
+        <div style="font-weight:700;font-size:13px;color:var(--blue-dark);margin-bottom:12px;">➕ Nuevo usuario</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div class="form-group" style="margin:0;">
+            <label>Nombre completo</label>
+            <input type="text" id="nu-nombre" placeholder="Nombre Apellido">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Rol</label>
+            <select id="nu-rol">
+              <option value="comercial">Comercial</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Email</label>
+            <input type="email" id="nu-email" placeholder="email@empresa.com">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Contraseña inicial</label>
+            <input type="password" id="nu-pass" placeholder="Mínimo 6 caracteres">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="createUser()" id="btn-create-user">➕ Crear usuario</button>
+        <div id="create-user-error" style="display:none;color:var(--red);font-size:12px;margin-top:8px;"></div>
+      </div>
+      <!-- Users list -->
+      <div style="font-weight:700;font-size:13px;color:var(--text-light);margin-bottom:10px;">USUARIOS ACTUALES</div>
+      <div id="users-list">
+        <div style="text-align:center;padding:20px;color:var(--text-light);">Cargando...</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('users-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- HEADER -->
 <div id="header">
   <div class="brand">
@@ -1004,11 +1193,20 @@ body {
     <span id="email-sync-text" style="cursor:pointer;" onclick="showEmailSyncLog()">📧 ...</span>
     <span onclick="forceSyncEmail()" title="Sincronizar ahora" style="cursor:pointer;opacity:0.7;font-size:13px;line-height:1;" id="email-sync-refresh">🔄</span>
   </div>
+  <div id="header-user" style="display:none;">
+    <div class="user-avatar" id="header-avatar">?</div>
+    <div>
+      <div class="user-name" id="header-name">—</div>
+      <div class="user-rol"  id="header-rol">—</div>
+    </div>
+  </div>
   <div class="header-actions">
-    <button class="btn-icon" onclick="location.href='agenda.html'">📅 Agenda</button>
-    <button class="btn-icon" onclick="location.href='importar_prospectos.html'">📥 Importar</button>
-    <button class="btn-icon" onclick="location.href='informe_pipeline.html'">📋 Informes</button>
-    <button class="btn-icon" onclick="openSetupModal()">⚙ Config</button>
+    <button class="btn-icon" id="btn-nav-agenda"    onclick="location.href='agenda.html'">📅 Agenda</button>
+    <button class="btn-icon" id="btn-nav-importar"  onclick="location.href='importar_prospectos.html'">📥 Importar</button>
+    <button class="btn-icon" id="btn-nav-informes"  onclick="location.href='informe_pipeline.html'">📋 Informes</button>
+    <button class="btn-icon" id="btn-nav-usuarios"  onclick="openUsersModal()" style="display:none;">👥 Usuarios</button>
+    <button class="btn-icon" id="btn-nav-config"    onclick="openSetupModal()">⚙ Config</button>
+    <button class="btn-icon" id="btn-nav-logout"    onclick="doLogout()" style="background:rgba(231,76,60,0.25);display:none;">⏻ Salir</button>
   </div>
 </div>
 <!-- NEGOCIO SELECTOR -->
@@ -1405,8 +1603,42 @@ body {
       ⚠ Tienes <strong id="migrate-count">0</strong> oportunidades guardadas en local. ¿Subirlas a Firebase?
       <button class="btn btn-primary" style="margin-left:10px;padding:5px 12px;font-size:12px;" onclick="syncLocalToFirebase()">📤 Subir a Firebase</button>
     </div>
+    <!-- Auth & Rules instructions -->
+    <div style="background:#f0f4f8;border:1px solid var(--blue-light);border-radius:6px;padding:14px 16px;margin:0 20px 12px;">
+      <div style="font-weight:700;font-size:12px;color:var(--blue-dark);margin-bottom:8px;">🔐 PASOS OBLIGATORIOS (una sola vez en Firebase Console)</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.8;">
+        <b>1.</b> <b>Authentication</b> → Comenzar → Correo/Contraseña → <b>Activar</b><br>
+        <b>2.</b> Authentication → <b>Usuarios</b> → Añadir usuario (tu email + contraseña)<br>
+        <b>3.</b> Firestore → <b>Reglas</b> → Reemplazar con:<br>
+        <pre style="background:white;border:1px solid #d0d7de;border-radius:4px;padding:8px;font-size:11px;margin:6px 0;overflow-x:auto;white-space:pre;">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function activo() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.activo == true;
+    }
+    function esAdmin() {
+      return activo() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+    match /oportunidades/{id} {
+      allow read, write: if request.auth != null && activo();
+    }
+    match /usuarios/{uid} {
+      allow read:   if request.auth != null && activo();
+      allow write:  if request.auth != null && esAdmin();
+      allow create: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}</pre>
+        <b>4.</b> Guarda la configuración aquí abajo y <b>recarga la página</b> → aparecerá el login
+      </div>
+    </div>
+    <div id="migrate-banner" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin:0 20px 12px;font-size:13px;color:#856404;">
+      ⚠ Tienes <strong id="migrate-count">0</strong> oportunidades guardadas en local. ¿Subirlas a Firebase?
+      <button class="btn btn-primary" style="margin-left:10px;padding:5px 12px;font-size:12px;" onclick="syncLocalToFirebase()">📤 Subir a Firebase</button>
+    </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="useLocalMode()">Usar solo local</button>
+      <button class="btn btn-secondary" onclick="useLocalMode()">Solo guardar API keys</button>
       <button class="btn btn-primary" onclick="saveFirebaseConfig()">Conectar Firebase</button>
     </div>
   </div>
@@ -1605,47 +1837,379 @@ function updateFormSelects() {
 }
 
 // ══════════════════════════════════════
-// FIREBASE / LOCAL STORAGE
+// ══════════════════════════════════════
+// FIREBASE / AUTH
 // ══════════════════════════════════════
 const LS_KEY = 'ningenia_pipeline_data';
 const LS_CFG = 'ningenia_firebase_cfg';
 
+let currentUser  = null;  // { uid, nombre, rol, email, activo }
+let firebaseAuth = null;  // Firebase Auth instance
+let firebaseMod  = null;  // Firebase module refs
+
+function getVisibleData() {
+  if (!currentUser) return [];
+  if (currentUser.rol === 'admin') return allData;
+  return allData.filter(o => (o.comercial || '') === currentUser.nombre);
+}
+
 async function initFirebase() {
   const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
   if (!cfg || !cfg.apiKey) {
-    setSyncStatus('local');
-    loadLocal();
+    // No Firebase config → show login screen with config notice
+    showLoginScreen('Configura Firebase en ⚙ Config antes de iniciar sesión.');
     return;
   }
-  showFirebaseError(null); // clear any previous error
+  showFirebaseError(null);
   try {
     const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
-    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
-    // Prevent "app already exists" error
+    const { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
+    const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteApp: _delApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js');
+
     const app = getApps().length ? getApp() : initializeApp(cfg);
-    firebaseDb = { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, db: getFirestore(app) };
-    const colRef = firebaseDb.collection(firebaseDb.db, 'oportunidades');
-    unsubscribe = firebaseDb.onSnapshot(colRef, snap => {
-      allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      applyFilters();
-      renderAll();
-      // Sync email once after first data load
-      if (!emailSyncTimer) setTimeout(startEmailSyncLoop, 1200);
-    }, err => {
-      const msg = err.code === 'permission-denied'
-        ? 'Sin permisos en Firestore. Ve a Firebase → Firestore → Reglas y pon: allow read, write: if true;'
-        : 'Error Firebase: ' + err.message;
-      showFirebaseError(msg);
-      setSyncStatus('offline');
-      loadLocal();
+    const db  = getFirestore(app);
+    const auth = getAuth(app);
+
+    firebaseMod = { initializeApp, getApps, getApp, getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, cfg };
+    firebaseDb  = { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, db };
+    firebaseAuth = auth;
+
+    // Gate everything on auth state
+    onAuthStateChanged(auth, async (fbUser) => {
+      if (!fbUser) {
+        // Not logged in — show login screen
+        currentUser = null;
+        showLoginScreen();
+        return;
+      }
+      // Logged in — read user profile from Firestore
+      try {
+        const userSnap = await getDoc(doc(db, 'usuarios', fbUser.uid));
+        if (!userSnap.exists()) {
+          // Check if first user ever
+          const allUsers = await getDocs(collection(db, 'usuarios'));
+          if (allUsers.empty) {
+            // First user → create admin
+            showFirstAdminSetup(fbUser);
+          } else {
+            await signOut(auth);
+            showLoginScreen('Tu cuenta no está autorizada. Contacta con el administrador.');
+          }
+          return;
+        }
+        const ud = userSnap.data();
+        if (!ud.activo) {
+          await signOut(auth);
+          showLoginScreen('Tu cuenta está desactivada. Contacta con el administrador.');
+          return;
+        }
+        currentUser = { uid: fbUser.uid, ...ud };
+        hideLoginScreen();
+        applyRoleUI();
+        startFirestoreListener(db);
+      } catch (e) {
+        // If Firestore rules block reading usuarios → likely rules not yet updated
+        // Keep the user logged out and show clear message
+        const msg = e.code === 'permission-denied'
+          ? 'Sin permisos en Firestore. Actualiza las Reglas de Firestore (ver instrucciones en ⚙ Config).'
+          : 'Error al cargar perfil: ' + e.message;
+        try { await signOut(auth); } catch {}
+        currentUser = null;
+        showLoginScreen(msg);
+      }
     });
+
     setSyncStatus('cloud');
-    toast('Conectado a Firebase ☁', 'success');
   } catch (e) {
-    showFirebaseError('Error al conectar: ' + e.message);
-    setSyncStatus('local');
-    loadLocal();
+    showFirebaseError('Error al conectar Firebase: ' + e.message);
+    showLoginScreen('Error al conectar Firebase: ' + e.message);
   }
+}
+
+function startFirestoreListener(db) {
+  if (unsubscribe) unsubscribe();
+  const { collection, onSnapshot } = firebaseMod;
+  const colRef = collection(db, 'oportunidades');
+  unsubscribe = onSnapshot(colRef, snap => {
+    allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    applyFilters();
+    renderAll();
+    if (!emailSyncTimer) setTimeout(startEmailSyncLoop, 1200);
+  }, err => {
+    const msg = err.code === 'permission-denied'
+      ? 'Sin permisos en Firestore. Actualiza las Reglas de Firestore en Firebase Console.'
+      : 'Error Firestore: ' + err.message;
+    showFirebaseError(msg);
+    setSyncStatus('offline');
+  });
+}
+
+// ── LOGIN / LOGOUT ──────────────────────────────────
+function showLoginScreen(errMsg) {
+  const el = document.getElementById('login-screen');
+  if (!el) return;
+  el.classList.add('visible');
+  document.body.style.overflow = 'hidden'; // prevent scrolling app behind
+  const hu = document.getElementById('header-user');
+  if (hu) hu.style.display = 'none';
+  const lo = document.getElementById('btn-nav-logout');
+  if (lo) lo.style.display = 'none';
+  if (errMsg) {
+    const errEl = document.getElementById('login-error');
+    if (errEl) { errEl.textContent = errMsg; errEl.classList.add('visible'); }
+  }
+}
+
+function hideLoginScreen() {
+  const el = document.getElementById('login-screen');
+  if (!el) return;
+  el.classList.remove('visible');
+  document.body.style.overflow = '';
+  const errEl = document.getElementById('login-error');
+  if (errEl) errEl.classList.remove('visible');
+  const emailEl = document.getElementById('login-email');
+  const passEl  = document.getElementById('login-password');
+  if (emailEl) emailEl.value = '';
+  if (passEl)  passEl.value  = '';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+
+  if (!email || !pass) {
+    errEl.textContent = 'Introduce email y contraseña.';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  errEl.classList.remove('visible');
+
+  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
+  if (!cfg || !cfg.apiKey) {
+    errEl.textContent = 'Primero configura Firebase (botón ⚙ Config abajo).';
+    errEl.classList.add('visible');
+    btn.disabled = false;
+    btn.textContent = 'Iniciar sesión';
+    return;
+  }
+
+  try {
+    await firebaseMod.signInWithEmailAndPassword(firebaseAuth, email, pass);
+    // onAuthStateChanged will handle the rest
+  } catch (e) {
+    const msgs = {
+      'auth/user-not-found':   'Usuario no encontrado.',
+      'auth/wrong-password':   'Contraseña incorrecta.',
+      'auth/invalid-email':    'Email no válido.',
+      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
+      'auth/invalid-credential': 'Email o contraseña incorrectos.',
+    };
+    errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Iniciar sesión';
+  }
+}
+
+async function doLogout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  if (emailSyncTimer) { clearInterval(emailSyncTimer); emailSyncTimer = null; }
+  emailSyncRunning = false;
+  currentUser = null;
+  allData = [];
+  filteredData = [];
+  await firebaseMod.signOut(firebaseAuth);
+  // onAuthStateChanged → showLoginScreen
+}
+
+// ── PRIMER ADMIN ─────────────────────────────────
+let _pendingFbUser = null;
+
+function showFirstAdminSetup(fbUser) {
+  _pendingFbUser = fbUser;
+  openModal('first-admin-modal');
+  setTimeout(() => document.getElementById('first-admin-name').focus(), 100);
+}
+
+async function createFirstAdmin() {
+  const nombre = document.getElementById('first-admin-name').value.trim();
+  if (!nombre) { toast('Introduce tu nombre', 'error'); return; }
+  if (!_pendingFbUser) return;
+
+  try {
+    const { doc, setDoc } = firebaseMod;
+    const db = firebaseDb.db;
+    await setDoc(doc(db, 'usuarios', _pendingFbUser.uid), {
+      nombre, rol: 'admin', email: _pendingFbUser.email, activo: true, creadoEn: new Date().toISOString()
+    });
+    closeModal('first-admin-modal');
+    currentUser = { uid: _pendingFbUser.uid, nombre, rol: 'admin', email: _pendingFbUser.email, activo: true };
+    _pendingFbUser = null;
+    hideLoginScreen();
+    applyRoleUI();
+    startFirestoreListener(db);
+    toast('👑 Administrador configurado. ¡Bienvenido, ' + nombre + '!', 'success');
+  } catch (e) {
+    toast('Error al guardar: ' + e.message, 'error');
+  }
+}
+
+// ── ROLE UI ──────────────────────────────────────
+function applyRoleUI() {
+  if (!currentUser) return;
+  const isAdmin = currentUser.rol === 'admin';
+
+  // Header user info
+  const hUser = document.getElementById('header-user');
+  hUser.style.display = 'flex';
+  document.getElementById('header-avatar').textContent = currentUser.nombre.substring(0,2).toUpperCase();
+  document.getElementById('header-name').textContent   = currentUser.nombre;
+  document.getElementById('header-rol').textContent    = isAdmin ? 'Administrador' : 'Comercial';
+  document.getElementById('btn-nav-logout').style.display  = '';
+
+  // Admin-only buttons
+  document.getElementById('btn-nav-usuarios').style.display = isAdmin ? '' : 'none';
+  document.getElementById('btn-nav-config').style.display   = isAdmin ? '' : 'none';
+  document.getElementById('btn-nav-importar').style.display = isAdmin ? '' : 'none';
+  document.getElementById('btn-bulk').style.display         = isAdmin ? '' : 'none';
+
+  // Comercial filter hidden for comerciales (they only see their own)
+  const fcEl = document.getElementById('filter-comercial');
+  if (fcEl) fcEl.closest('.toolbar-filters') && (fcEl.style.display = isAdmin ? '' : 'none');
+}
+
+// ── GESTIÓN DE USUARIOS (admin) ──────────────────
+async function openUsersModal() {
+  openModal('users-modal');
+  await loadUsersList();
+}
+
+async function loadUsersList() {
+  const listEl = document.getElementById('users-list');
+  listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-light);">Cargando...</div>';
+  try {
+    const { getDocs, collection } = firebaseMod;
+    const snap = await getDocs(collection(firebaseDb.db, 'usuarios'));
+    const users = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => a.nombre.localeCompare(b.nombre));
+
+    if (!users.length) { listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-light);">No hay usuarios.</div>'; return; }
+
+    listEl.innerHTML = users.map(u => {
+      const initials = u.nombre.substring(0,2).toUpperCase();
+      const badgeClass = !u.activo ? 'inactivo' : u.rol;
+      const badgeText  = !u.activo ? 'Inactivo' : (u.rol === 'admin' ? 'Admin' : 'Comercial');
+      const isSelf = u.id === currentUser.uid;
+      return `<div class="user-list-item">
+        <div class="user-avatar-md" style="background:${u.rol==='admin'?'#e67e22':'var(--blue-mid)'};">${initials}</div>
+        <div class="user-info">
+          <div class="user-info-name">${esc(u.nombre)}${isSelf ? ' <span style="font-size:10px;color:var(--text-light);">(tú)</span>' : ''}</div>
+          <div class="user-info-email">${esc(u.email||'')}</div>
+        </div>
+        <span class="user-badge ${badgeClass}">${badgeText}</span>
+        <div class="user-actions">
+          ${!isSelf ? `
+          <button class="btn-user-role" onclick="toggleUserRole('${u.id}','${u.rol}')"
+            title="${u.rol==='admin'?'Cambiar a Comercial':'Cambiar a Admin'}">
+            ${u.rol==='admin'?'→ Comercial':'→ Admin'}
+          </button>
+          <button class="btn-user-toggle" onclick="toggleUserActive('${u.id}',${u.activo})"
+            style="${u.activo?'':'background:#fdedec;color:var(--red);'}">
+            ${u.activo ? '🔒 Desactivar' : '✅ Activar'}
+          </button>` : '<span style="font-size:11px;color:var(--text-light);">Tu cuenta</span>'}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div style="color:var(--red);padding:12px;">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+async function createUser() {
+  const nombre = document.getElementById('nu-nombre').value.trim();
+  const email  = document.getElementById('nu-email').value.trim();
+  const pass   = document.getElementById('nu-pass').value;
+  const rol    = document.getElementById('nu-rol').value;
+  const errEl  = document.getElementById('create-user-error');
+  const btn    = document.getElementById('btn-create-user');
+
+  errEl.style.display = 'none';
+  if (!nombre || !email || !pass) { errEl.textContent = 'Rellena todos los campos.'; errEl.style.display = 'block'; return; }
+  if (pass.length < 6)            { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Creando...';
+
+  try {
+    const cfg = JSON.parse(localStorage.getItem(LS_CFG));
+    // Create auth user via secondary app (no cierra sesión del admin)
+    const { initializeApp: _init, getApps } = firebaseMod;
+    const { getAuth: _getAuth, createUserWithEmailAndPassword: _create } = firebaseMod;
+    const secondaryName = 'secondary_' + Date.now();
+    const secondaryApp  = _init(cfg, secondaryName);
+    const secondaryAuth = _getAuth(secondaryApp);
+    const cred = await _create(secondaryAuth, email, pass);
+    const newUid = cred.user.uid;
+    // v9 modular: signOut(authInstance)
+    const { signOut: _signOut } = firebaseMod;
+    try { await _signOut(secondaryAuth); } catch {}
+    try { await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js').then(m => m.deleteApp && m.deleteApp(secondaryApp)); } catch {}
+
+    // Save user profile in Firestore
+    const { doc, setDoc } = firebaseMod;
+    await setDoc(doc(firebaseDb.db, 'usuarios', newUid), {
+      nombre, email, rol, activo: true, creadoEn: new Date().toISOString()
+    });
+
+    // Clear form
+    ['nu-nombre','nu-email','nu-pass'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('nu-rol').value = 'comercial';
+    toast(`✅ Usuario "${nombre}" creado como ${rol}`, 'success');
+    await loadUsersList();
+
+  } catch (e) {
+    const msgs = {
+      'auth/email-already-in-use': 'Ese email ya tiene una cuenta.',
+      'auth/invalid-email':        'Email no válido.',
+      'auth/weak-password':        'Contraseña demasiado débil (mín. 6 caracteres).',
+    };
+    errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '➕ Crear usuario';
+  }
+}
+
+async function toggleUserActive(uid, currentlyActive) {
+  const action = currentlyActive ? 'desactivar' : 'activar';
+  if (!confirm(`¿Quieres ${action} este usuario?`)) return;
+  try {
+    const { doc, setDoc } = firebaseMod;
+    // Use update-like setDoc merge
+    const snap = await firebaseMod.getDoc(doc(firebaseDb.db, 'usuarios', uid));
+    if (!snap.exists()) return;
+    await setDoc(doc(firebaseDb.db, 'usuarios', uid), { ...snap.data(), activo: !currentlyActive });
+    await loadUsersList();
+    toast(`Usuario ${action === 'activar' ? 'activado' : 'desactivado'}`, 'success');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function toggleUserRole(uid, currentRol) {
+  const newRol = currentRol === 'admin' ? 'comercial' : 'admin';
+  if (!confirm(`¿Cambiar rol a ${newRol}?`)) return;
+  try {
+    const { doc, setDoc } = firebaseMod;
+    const snap = await firebaseMod.getDoc(doc(firebaseDb.db, 'usuarios', uid));
+    if (!snap.exists()) return;
+    await setDoc(doc(firebaseDb.db, 'usuarios', uid), { ...snap.data(), rol: newRol });
+    await loadUsersList();
+    toast(`Rol cambiado a ${newRol}`, 'success');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
 function showFirebaseError(msg) {
@@ -1663,10 +2227,10 @@ function showFirebaseError(msg) {
 }
 
 function loadLocal() {
-  allData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
-  applyFilters();
+  // Firebase siempre requerido — loadLocal solo como fallback visual vacío
+  allData = [];
+  filteredData = [];
   renderAll();
-  if (!emailSyncTimer) setTimeout(startEmailSyncLoop, 1200);
 }
 
 async function saveDoc(opp) {
@@ -1715,8 +2279,9 @@ function applyFilters() {
   const sector    = document.getElementById('filter-sector')?.value || '';
   const search    = (document.getElementById('filter-search')?.value || '').toLowerCase();
 
-  // Filter by current negocio first
-  const negData = allData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
+  // Apply role filter first, then negocio
+  const roleData = getVisibleData();
+  const negData  = roleData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
 
   filteredData = negData.filter(o => {
     if (comercial && o.comercial !== comercial) return false;
@@ -1905,7 +2470,7 @@ async function onDrop(e, stageId) {
 // DASHBOARD
 // ══════════════════════════════════════
 function renderDashboard() {
-  const negData = allData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
+  const negData = getVisibleData().filter(o => (o.negocio || 'ningenia') === currentNegocio);
   const active = negData.filter(o => !['cerrado','descartado'].includes(o.etapa));
   const closed = negData.filter(o => o.etapa === 'cerrado');
   const todayStr = today();
@@ -1970,7 +2535,7 @@ function renderDashboard() {
 // HISTORIAL TAB
 // ══════════════════════════════════════
 function renderHistorial() {
-  const negData   = allData.filter(o => (o.negocio || 'ningenia') === currentNegocio);
+  const negData   = getVisibleData().filter(o => (o.negocio || 'ningenia') === currentNegocio);
   const closed    = negData.filter(o => o.etapa === 'cerrado').sort((a,b) => (b.fechaCierre||'').localeCompare(a.fechaCierre||''));
   const discarded = negData.filter(o => o.etapa === 'descartado').sort((a,b) => (b.updatedAt?.seconds||0)-(a.updatedAt?.seconds||0));
 
@@ -2045,6 +2610,16 @@ function openAddModal() {
   document.getElementById('modal-historial').style.display = 'none';
   document.getElementById('add-nota-row').style.display = 'none';
   document.getElementById('f-fecha-contacto').value = today();
+  // Pre-fill comercial for comercial role
+  const fcEl = document.getElementById('f-comercial');
+  if (currentUser && currentUser.rol === 'comercial') {
+    fcEl.value    = currentUser.nombre;
+    fcEl.disabled = true;
+    fcEl.style.background = '#f0f4f8';
+  } else {
+    fcEl.disabled = false;
+    fcEl.style.background = '';
+  }
   openModal('opp-modal');
 }
 
@@ -2097,6 +2672,10 @@ function openEditModal(id, forceCierre = false) {
   editingId = id;
   const opp = allData.find(o => o.id === id);
   if (!opp) return;
+  // Comerciales can't edit other people's prospects
+  if (currentUser && currentUser.rol === 'comercial' && opp.comercial !== currentUser.nombre) {
+    openViewModal(id); return;
+  }
   document.getElementById('modal-title').textContent = 'Editar: ' + opp.empresa;
   fillForm(opp);
   if (forceCierre) { document.getElementById('f-etapa').value = 'cerrado'; toggleCierreSection(); }
@@ -2335,14 +2914,13 @@ function saveFirebaseConfig() {
 }
 
 function useLocalMode() {
-  localStorage.removeItem(LS_CFG);
+  // Firebase requerido — solo guardar API keys
   const ck = document.getElementById('cfg-claude-key')?.value.trim();
   if (ck) localStorage.setItem('ningenia_claude_key', ck);
   const ep = document.getElementById('cfg-email-pass')?.value.trim();
   if (ep) localStorage.setItem('ningenia_email_pass', ep);
+  toast('API keys guardadas. Firebase es necesario para entrar.', 'info');
   closeModal('setup-modal');
-  setSyncStatus('local');
-  toast('Modo local activado', 'info');
 }
 
 // ══════════════════════════════════════
@@ -2398,6 +2976,8 @@ document.querySelectorAll('.neg-btn').forEach(b => {
 document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — Pipeline Comercial';
 // Update form selects
 updateFormSelects();
+// Show login screen immediately — Firebase Auth will hide it when session is valid
+showLoginScreen();
 initFirebase();
 
 // ══════════════════════════════════════
