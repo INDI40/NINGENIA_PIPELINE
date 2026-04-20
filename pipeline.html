@@ -1861,73 +1861,29 @@ function getVisibleData() {
 async function initFirebase() {
   const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
   if (!cfg || !cfg.apiKey) {
-    // No Firebase config → show login screen with config notice
-    showLoginScreen('Configura Firebase en ⚙ Config antes de iniciar sesión.');
+    showFirebaseError('Configura Firebase en ⚙ Configuración.');
     return;
   }
   showFirebaseError(null);
+
+  // Acceso libre — sin autenticación
+  currentUser = { uid: 'local', nombre: 'Admin', rol: 'admin', activo: true };
+  applyRoleUI();
+
   try {
     const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
     const { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
-    const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteApp: _delApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js');
 
     const app = getApps().length ? getApp() : initializeApp(cfg);
     const db  = getFirestore(app);
-    const auth = getAuth(app);
 
-    firebaseMod = { initializeApp, getApps, getApp, getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, cfg };
+    firebaseMod = { initializeApp, getApps, getApp, getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp, cfg };
     firebaseDb  = { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, db };
-    firebaseAuth = auth;
-
-    // Gate everything on auth state
-    onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) {
-        // Not logged in — show login screen
-        currentUser = null;
-        showLoginScreen();
-        return;
-      }
-      // Logged in — read user profile from Firestore
-      try {
-        const userSnap = await getDoc(doc(db, 'usuarios', fbUser.uid));
-        if (!userSnap.exists()) {
-          // Check if first user ever
-          const allUsers = await getDocs(collection(db, 'usuarios'));
-          if (allUsers.empty) {
-            // First user → create admin
-            showFirstAdminSetup(fbUser);
-          } else {
-            await signOut(auth);
-            showLoginScreen('Tu cuenta no está autorizada. Contacta con el administrador.');
-          }
-          return;
-        }
-        const ud = userSnap.data();
-        if (!ud.activo) {
-          await signOut(auth);
-          showLoginScreen('Tu cuenta está desactivada. Contacta con el administrador.');
-          return;
-        }
-        currentUser = { uid: fbUser.uid, ...ud };
-        hideLoginScreen();
-        applyRoleUI();
-        startFirestoreListener(db);
-      } catch (e) {
-        // If Firestore rules block reading usuarios → likely rules not yet updated
-        // Keep the user logged out and show clear message
-        const msg = e.code === 'permission-denied'
-          ? 'Sin permisos en Firestore. Actualiza las Reglas de Firestore (ver instrucciones en ⚙ Config).'
-          : 'Error al cargar perfil: ' + e.message;
-        try { await signOut(auth); } catch {}
-        currentUser = null;
-        showLoginScreen(msg);
-      }
-    });
 
     setSyncStatus('cloud');
+    startFirestoreListener(db);
   } catch (e) {
     showFirebaseError('Error al conectar Firebase: ' + e.message);
-    showLoginScreen('Error al conectar Firebase: ' + e.message);
   }
 }
 
@@ -2023,15 +1979,8 @@ async function doLogin() {
 }
 
 async function doLogout() {
-  if (!confirm('¿Cerrar sesión?')) return;
-  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-  if (emailSyncTimer) { clearInterval(emailSyncTimer); emailSyncTimer = null; }
-  emailSyncRunning = false;
-  currentUser = null;
-  allData = [];
-  filteredData = [];
-  await firebaseMod.signOut(firebaseAuth);
-  // onAuthStateChanged → showLoginScreen
+  // Autenticación desactivada — no hay sesión que cerrar
+  toast('Acceso libre activo. La autenticación está desactivada.', 'info');
 }
 
 // ── PRIMER ADMIN ─────────────────────────────────
@@ -2077,10 +2026,11 @@ function applyRoleUI() {
   document.getElementById('header-avatar').textContent = currentUser.nombre.substring(0,2).toUpperCase();
   document.getElementById('header-name').textContent   = currentUser.nombre;
   document.getElementById('header-rol').textContent    = isAdmin ? 'Administrador' : 'Comercial';
-  document.getElementById('btn-nav-logout').style.display  = '';
+  // Logout button oculto (autenticación desactivada)
+  document.getElementById('btn-nav-logout').style.display  = 'none';
 
-  // Admin-only buttons
-  document.getElementById('btn-nav-usuarios').style.display = isAdmin ? '' : 'none';
+  // Admin-only buttons (Usuarios oculto — autenticación desactivada)
+  document.getElementById('btn-nav-usuarios').style.display = 'none';
   document.getElementById('btn-nav-config').style.display   = isAdmin ? '' : 'none';
   document.getElementById('btn-nav-importar').style.display = isAdmin ? '' : 'none';
   document.getElementById('btn-bulk').style.display         = isAdmin ? '' : 'none';
@@ -2990,8 +2940,7 @@ document.querySelectorAll('.neg-btn').forEach(b => {
 document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — Pipeline Comercial';
 // Update form selects
 updateFormSelects();
-// Show login screen immediately — Firebase Auth will hide it when session is valid
-showLoginScreen();
+// Autenticación desactivada — acceso libre directo
 initFirebase();
 
 // ══════════════════════════════════════
