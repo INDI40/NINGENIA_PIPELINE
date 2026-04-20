@@ -832,6 +832,9 @@ body {
     <div id="sync-dot"></div>
     <span id="sync-label">Iniciando...</span>
   </div>
+  <div id="email-sync-indicator" style="display:none;font-size:11px;background:rgba(255,255,255,0.15);border-radius:4px;padding:3px 8px;cursor:pointer;" onclick="showEmailSyncLog()" title="Ver emails procesados">
+    <span id="email-sync-text">📧 ...</span>
+  </div>
   <div class="header-actions">
     <button class="btn-icon" onclick="location.href='agenda.html'">📅 Agenda</button>
     <button class="btn-icon" onclick="location.href='importar_prospectos.html'">📥 Importar</button>
@@ -1165,6 +1168,17 @@ body {
           <input type="password" id="cfg-claude-key" placeholder="sk-proj-...">
         </div>
       </div>
+      <hr style="margin:16px 0 12px;border:none;border-top:1px solid var(--gray-light);">
+      <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px;">📧 Sincronización de Correo (opcional)</div>
+      <div class="setup-step" style="margin-bottom:10px;">
+        Requiere tener <strong>iniciar_servidor.bat</strong> en ejecución en tu PC. El pipeline revisará tu correo al abrirse y actualizará las fichas automáticamente.
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Contraseña correo (david.garrido@indi40.com)</label>
+          <input type="password" id="cfg-email-pass" placeholder="Contraseña de tu correo">
+        </div>
+      </div>
     </div>
     <div id="migrate-banner" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin:0 20px 12px;font-size:13px;color:#856404;">
       ⚠ Tienes <strong id="migrate-count">0</strong> oportunidades guardadas en local. ¿Subirlas a Firebase?
@@ -1394,6 +1408,8 @@ async function initFirebase() {
       allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       applyFilters();
       renderAll();
+      // Sync email once after first data load
+      setTimeout(syncEmail, 1200);
     }, err => {
       const msg = err.code === 'permission-denied'
         ? 'Sin permisos en Firestore. Ve a Firebase → Firestore → Reglas y pon: allow read, write: if true;'
@@ -1429,6 +1445,7 @@ function loadLocal() {
   allData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
   applyFilters();
   renderAll();
+  setTimeout(syncEmail, 1200);
 }
 
 async function saveDoc(opp) {
@@ -2020,6 +2037,8 @@ function openSetupModal() {
   });
   const ckEl = document.getElementById('cfg-claude-key');
   if (ckEl) ckEl.value = localStorage.getItem('ningenia_claude_key') || '';
+  const epEl = document.getElementById('cfg-email-pass');
+  if (epEl) epEl.value = localStorage.getItem('ningenia_email_pass') || '';
   // Show migrate banner if there's local data
   const localData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
   const banner = document.getElementById('migrate-banner');
@@ -2077,6 +2096,8 @@ function saveFirebaseConfig() {
   localStorage.setItem(LS_CFG, JSON.stringify(cfg));
   const ck = document.getElementById('cfg-claude-key')?.value.trim();
   if (ck) localStorage.setItem('ningenia_claude_key', ck);
+  const ep = document.getElementById('cfg-email-pass')?.value.trim();
+  if (ep) localStorage.setItem('ningenia_email_pass', ep);
   closeModal('setup-modal');
   if (unsubscribe) unsubscribe();
   firebaseDb = null;
@@ -2088,6 +2109,8 @@ function useLocalMode() {
   localStorage.removeItem(LS_CFG);
   const ck = document.getElementById('cfg-claude-key')?.value.trim();
   if (ck) localStorage.setItem('ningenia_claude_key', ck);
+  const ep = document.getElementById('cfg-email-pass')?.value.trim();
+  if (ep) localStorage.setItem('ningenia_email_pass', ep);
   closeModal('setup-modal');
   setSyncStatus('local');
   toast('Modo local activado', 'info');
@@ -2146,6 +2169,160 @@ document.querySelector('.brand span:last-child').textContent = neg().icono + ' '
 // Update form selects
 updateFormSelects();
 initFirebase();
+
+// ══════════════════════════════════════
+// EMAIL SYNC
+// ══════════════════════════════════════
+const EMAIL_SYNC_URL   = 'http://localhost:8765';
+let   emailSyncDone    = false;
+let   emailSyncLog     = [];
+
+async function syncEmail() {
+  if (emailSyncDone) return;
+  emailSyncDone = true;
+
+  const emailPass = localStorage.getItem('ningenia_email_pass');
+  const openaiKey = localStorage.getItem('ningenia_claude_key');
+  if (!emailPass || !openaiKey) return; // No configurado — silencioso
+
+  // Verificar que el servidor local está corriendo
+  const indicator = document.getElementById('email-sync-indicator');
+  const syncText  = document.getElementById('email-sync-text');
+  try {
+    const ping = await fetch(EMAIL_SYNC_URL + '/ping', { signal: AbortSignal.timeout(1500) });
+    if (!ping.ok) return;
+  } catch {
+    // Servidor no activo — no mostrar error, silencioso
+    return;
+  }
+
+  // Mostrar indicador
+  indicator.style.display = 'block';
+  syncText.textContent = '📧 Revisando correo...';
+
+  // Recoger prospectos activos de TODOS los negocios
+  const prospectos = allData.filter(o => !['cerrado','descartado'].includes(o.etapa));
+
+  try {
+    const resp = await fetch(EMAIL_SYNC_URL + '/sync', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        openai_key: openaiKey,
+        email_pass: emailPass,
+        email_user: 'david.garrido@indi40.com',
+        prospects:  prospectos,
+      }),
+      signal: AbortSignal.timeout(60000),
+    });
+
+    const result = await resp.json();
+
+    if (!resp.ok) {
+      syncText.textContent = '📧 ⚠ Error';
+      indicator.title = result.error || 'Error desconocido';
+      toast('📧 Error sync correo: ' + (result.error || 'Error'), 'error');
+      return;
+    }
+
+    const updates = result.updates || [];
+    emailSyncLog  = updates;
+
+    if (updates.length === 0) {
+      syncText.textContent = `📧 Sin novedades`;
+      indicator.title = result.msg || 'Sin emails nuevos relacionados';
+      return;
+    }
+
+    // Aplicar actualizaciones a Firebase
+    let applied = 0;
+    const today_ = today();
+
+    for (const u of updates) {
+      const opp = allData.find(o => o.id === u.prospecto_id);
+      if (!opp) continue;
+
+      const updated = { ...opp };
+
+      // 1. Añadir al historial
+      updated.historial = updated.historial || [];
+      updated.historial.unshift({
+        fecha:    today_,
+        tipo:     'email',
+        nota:     `📧 ${u.asunto || '(sin asunto)'} — De: ${u.remitente || '?'}\n${u.resumen_historial || ''}`,
+        comercial: updated.comercial || 'David',
+      });
+
+      // 2. Actualizar próxima acción
+      if (u.proxima_accion) {
+        updated.proximaAccion = u.proxima_accion;
+        if (u.fecha_accion) updated.fechaAccion = u.fecha_accion;
+      }
+
+      // 3. Cambiar etapa si la IA lo sugiere y es válida para el negocio
+      if (u.nueva_etapa) {
+        const negocioOpp = NEGOCIOS[updated.negocio || 'ningenia'];
+        const etapasValidas = [
+          ...negocioOpp.stages.map(s => s.id),
+          'cerrado', 'descartado'
+        ];
+        if (etapasValidas.includes(u.nueva_etapa)) {
+          const prevEtapa = updated.etapa;
+          updated.etapa = u.nueva_etapa;
+          updated.historial.unshift({
+            fecha:    today_,
+            tipo:     'cambio_etapa',
+            etapaAnterior: prevEtapa,
+            etapaNueva:    u.nueva_etapa,
+            nota:     'Cambio automático por email',
+            comercial: updated.comercial || 'David',
+          });
+        }
+      }
+
+      await saveDoc(updated);
+      applied++;
+    }
+
+    syncText.textContent = `📧 ${applied} ficha${applied !== 1 ? 's' : ''} actualizada${applied !== 1 ? 's' : ''}`;
+    indicator.title = `${result.msg} — Pulsa para ver el detalle`;
+    indicator.style.background = 'rgba(39,174,96,0.3)';
+
+    toast(`📧 ${applied} ficha${applied!==1?'s':''} actualizada${applied!==1?'s':''} desde el correo`, 'success');
+
+  } catch (err) {
+    syncText.textContent = '📧 ⚠';
+    indicator.title = 'Error: ' + err.message;
+  }
+}
+
+function showEmailSyncLog() {
+  if (!emailSyncLog.length) {
+    toast('Sin emails procesados en esta sesión', 'info');
+    return;
+  }
+  const lines = emailSyncLog.map(u =>
+    `<div style="border-bottom:1px solid #e0e0e0;padding:10px 0;">
+      <div style="font-weight:700;font-size:13px;">🏢 ${esc(u.prospecto_empresa)}</div>
+      <div style="font-size:12px;color:#555;margin:2px 0;">📧 ${esc(u.asunto)} — <em>${esc(u.remitente)}</em></div>
+      <div style="font-size:12px;margin:4px 0;">${esc(u.resumen_historial||'')}</div>
+      ${u.nueva_etapa ? `<div style="font-size:11px;color:#27ae60;">↑ Etapa → ${esc(u.nueva_etapa)}</div>` : ''}
+      ${u.proxima_accion ? `<div style="font-size:11px;color:#e67e22;">⏭ ${esc(u.proxima_accion)}</div>` : ''}
+    </div>`
+  ).join('');
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  panel.innerHTML = `
+    <div style="background:white;border-radius:8px;width:90%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+      <div style="background:#1F4E79;color:white;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+        <strong>📧 Emails procesados esta sesión (${emailSyncLog.length})</strong>
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <div style="overflow-y:auto;padding:0 18px;">${lines}</div>
+    </div>`;
+  document.body.appendChild(panel);
+}
 
 // ══════════════════════════════════════
 // IA — ANÁLISIS DE EMPRESA
