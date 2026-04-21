@@ -1112,7 +1112,13 @@ body {
     <button onclick="
       var sm = document.getElementById('setup-modal');
       if(sm){ sm.classList.add('open'); sm.style.cssText='display:flex!important;z-index:9999!important;'; }
-    " style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 16px;border-radius:20px;cursor:pointer;font-size:12px;">⚙ Configurar Firebase</button>
+    " style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:13px;">⚙ Configurar Firebase</button>
+    <button onclick="
+      if(confirm('¿Borrar la configuración guardada y reconfigurar?')){
+        localStorage.removeItem('ningenia_firebase_cfg');
+        location.reload();
+      }
+    " style="background:rgba(231,76,60,0.25);border:1px solid rgba(231,76,60,0.4);color:white;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:13px;">🗑 Resetear config</button>
   </div>
 </div>
 
@@ -1920,8 +1926,12 @@ async function initFirebase() {
 
     setSyncStatus('cloud');
   } catch (e) {
-    showFirebaseError('Error al conectar Firebase: ' + e.message);
-    showLoginScreen('Error al conectar Firebase: ' + e.message);
+    const isApiKey = e.message && (e.message.includes('api-key-not-valid') || e.message.includes('API key'));
+    const msg = isApiKey
+      ? '⚠️ API key inválida. Ve a Google Cloud Console → Credentials → tu API key → elimina las restricciones de dominio, o añade indi40.github.io. Luego pulsa "Resetear config" y vuelve a configurar.'
+      : 'Error al conectar Firebase: ' + e.message;
+    showFirebaseError(msg);
+    showLoginScreen(msg);
   }
 }
 
@@ -2002,11 +2012,13 @@ async function doLogin() {
     // onAuthStateChanged will handle the rest
   } catch (e) {
     const msgs = {
-      'auth/user-not-found':   'Usuario no encontrado.',
-      'auth/wrong-password':   'Contraseña incorrecta.',
-      'auth/invalid-email':    'Email no válido.',
-      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
-      'auth/invalid-credential': 'Email o contraseña incorrectos.',
+      'auth/user-not-found':      'Usuario no encontrado.',
+      'auth/wrong-password':      'Contraseña incorrecta.',
+      'auth/invalid-email':       'Email no válido.',
+      'auth/too-many-requests':   'Demasiados intentos. Espera unos minutos.',
+      'auth/invalid-credential':  'Email o contraseña incorrectos.',
+      'auth/api-key-not-valid':   '⚠️ API key inválida. Ve a Google Cloud Console → Credentials y elimina las restricciones de dominio del API key, o añade https://indi40.github.io/*',
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': '⚠️ API key inválida. Revisa las restricciones en Google Cloud Console → Credentials.',
     };
     errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
     errEl.classList.add('visible');
