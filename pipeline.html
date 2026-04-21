@@ -1386,8 +1386,6 @@ body {
   <div class="toolbar-filters">
     <select id="filter-comercial" onchange="applyFilters()">
       <option value="">Todos los comerciales</option>
-      <option value="David">David</option>
-      <option value="Comercial 2">Comercial 2</option>
     </select>
     <select id="filter-sector" onchange="applyFilters()">
       <option value="">Todos los sectores</option>
@@ -1570,8 +1568,6 @@ body {
         <div class="form-group">
           <label>Comercial</label>
           <select id="f-comercial">
-            <option value="David">David</option>
-            <option value="Comercial 2">Comercial 2</option>
           </select>
         </div>
         <div class="form-group">
@@ -2093,6 +2089,40 @@ function _enterApp(uid, ud, cacheKey, db) {
   hideLoginScreen();
   applyRoleUI();
   startFirestoreListener(db);
+  loadComercialDropdowns();
+}
+
+async function loadComercialDropdowns() {
+  try {
+    const { getDocs, collection } = firebaseMod;
+    const snap  = await getDocs(collection(firebaseDb.db, 'usuarios'));
+    const users = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(u => u.activo !== false)
+      .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+    // ── Formulario: #f-comercial ──────────────────
+    const formSel = document.getElementById('f-comercial');
+    if (formSel) {
+      const prevForm = formSel.value;
+      formSel.innerHTML = users
+        .map(u => `<option value="${esc(u.nombre)}">${esc(u.nombre)}${u.rol === 'admin' ? ' ★' : ''}</option>`)
+        .join('');
+      if (prevForm && [...formSel.options].some(o => o.value === prevForm)) formSel.value = prevForm;
+      else if (currentUser?.nombre) formSel.value = currentUser.nombre;
+    }
+
+    // ── Toolbar: #filter-comercial ────────────────
+    const filterSel = document.getElementById('filter-comercial');
+    if (filterSel) {
+      const prevFilter = filterSel.value;
+      filterSel.innerHTML = '<option value="">Todos los comerciales</option>' +
+        users.map(u => `<option value="${esc(u.nombre)}">${esc(u.nombre)}</option>`).join('');
+      if (prevFilter && [...filterSel.options].some(o => o.value === prevFilter)) filterSel.value = prevFilter;
+    }
+  } catch (e) {
+    console.warn('loadComercialDropdowns:', e.message);
+  }
 }
 
 function startFirestoreListener(db) {
@@ -2348,6 +2378,7 @@ async function createUser() {
     document.getElementById('nu-rol').value = 'comercial';
     toast(`✅ Usuario "${nombre}" creado como ${rol}`, 'success');
     await loadUsersList();
+    await loadComercialDropdowns();
 
   } catch (e) {
     const msgs = {
@@ -2372,6 +2403,7 @@ async function toggleUserActive(uid, currentlyActive) {
     if (!snap.exists()) return;
     await setDoc(doc(firebaseDb.db, 'usuarios', uid), { ...snap.data(), activo: !currentlyActive });
     await loadUsersList();
+    await loadComercialDropdowns();
     toast(`Usuario ${action === 'activar' ? 'activado' : 'desactivado'}`, 'success');
   } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
@@ -2889,7 +2921,7 @@ function clearForm() {
   ['ticket','ticket-real'].forEach(f => { const el = document.getElementById('f-'+f); if(el) el.value=''; });
   ['solucion','fuente'].forEach(f => { const el = document.getElementById('f-'+f); if(el) el.value=''; });
   document.getElementById('f-etapa').value = 'prospecto';
-  document.getElementById('f-comercial').value = 'David';
+  document.getElementById('f-comercial').value = currentUser?.nombre || '';
   document.getElementById('f-fecha-accion').value = '';
   document.getElementById('f-fecha-contacto').value = '';
   document.getElementById('f-fecha-cierre').value = '';
@@ -2915,7 +2947,7 @@ function fillForm(opp) {
   set('fecha-contacto', opp.fechaContacto); set('notas', opp.notas);
   set('ticket-real', opp.ticketReal); set('fecha-cierre', opp.fechaCierre);
   document.getElementById('f-etapa').value = opp.etapa || 'prospecto';
-  document.getElementById('f-comercial').value = opp.comercial || 'David';
+  document.getElementById('f-comercial').value = opp.comercial || currentUser?.nombre || '';
   toggleCierreSection();
 
   // Restaurar análisis IA guardado
