@@ -1517,6 +1517,20 @@ body {
           <input type="email" id="f-email" placeholder="correo@empresa.com">
         </div>
         <div class="form-group">
+          <label>Dirección</label>
+          <input type="text" id="f-direccion" placeholder="Calle, número...">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group">
+            <label>Localidad</label>
+            <input type="text" id="f-localidad" placeholder="Ciudad / Municipio">
+          </div>
+          <div class="form-group">
+            <label>Provincia</label>
+            <input type="text" id="f-provincia" placeholder="Provincia">
+          </div>
+        </div>
+        <div class="form-group">
           <label id="f-solucion-label">Solución</label>
           <select id="f-solucion">
             <option value="">Seleccionar...</option>
@@ -2869,7 +2883,7 @@ function historialText(h) {
 }
 
 function clearForm() {
-  ['empresa','sector','contacto','cargo','telefono','email','notas','proxima-accion'].forEach(f => {
+  ['empresa','sector','contacto','cargo','telefono','email','direccion','localidad','provincia','notas','proxima-accion'].forEach(f => {
     const el = document.getElementById('f-' + f);
     if (el) el.value = '';
   });
@@ -2890,6 +2904,7 @@ function fillForm(opp) {
   const set = (id, val) => { const el = document.getElementById('f-' + id); if (el) el.value = val || ''; };
   set('empresa', opp.empresa); set('sector', opp.sector); set('contacto', opp.contacto);
   set('cargo', opp.cargo); set('telefono', opp.telefono); set('email', opp.email);
+  set('direccion', opp.direccion); set('localidad', opp.localidad); set('provincia', opp.provincia);
   set('solucion', opp.solucion); set('ticket', opp.ticketEstimado); set('fuente', opp.fuente);
   set('proxima-accion', opp.proximaAccion); set('fecha-accion', opp.fechaAccion);
   set('fecha-contacto', opp.fechaContacto); set('notas', opp.notas);
@@ -2917,6 +2932,9 @@ async function saveOportunidad() {
   opp.cargo          = document.getElementById('f-cargo').value.trim();
   opp.telefono       = document.getElementById('f-telefono').value.trim();
   opp.email          = document.getElementById('f-email').value.trim();
+  opp.direccion      = document.getElementById('f-direccion').value.trim();
+  opp.localidad      = document.getElementById('f-localidad').value.trim();
+  opp.provincia      = document.getElementById('f-provincia').value.trim();
   opp.solucion       = document.getElementById('f-solucion').value;
   opp.ticketEstimado = parseFloat(document.getElementById('f-ticket').value) || 0;
   opp.etapa          = document.getElementById('f-etapa').value;
@@ -3407,18 +3425,105 @@ function showEmailSyncLog() {
 }
 
 // ══════════════════════════════════════
-// IA — ANÁLISIS DE EMPRESA
+// IA — ANÁLISIS B2B SENIOR (8 SECCIONES)
 // ══════════════════════════════════════
+
+function _b2bPrompt(empresa, sector, notas, negocio) {
+  const ticketRange = negocio.id === 'ningenia'
+    ? 'entre 20.000€ y 300.000€ (proyectos de automatización industrial)'
+    : negocio.id === 'loncheria'
+      ? 'entre 5.000€ y 80.000€ (maquila y marca propia de ibérico loncheado)'
+      : 'variable según el tipo de servicio y tamaño del cliente';
+
+  const negocioCtx = negocio.id === 'ningenia'
+    ? `Ningenia es una empresa de automatización industrial (sorters, visión artificial, robotización, integración ERP/MES). Sus clientes son empresas alimentarias, logísticas e industriales que buscan optimizar producción, reducir mano de obra o mejorar la trazabilidad.`
+    : negocio.id === 'loncheria'
+      ? `La Lonchería del Jamón ofrece maquila (loncheado y envasado de ibérico con la marca del cliente) y marca propia (producto terminado bajo la marca de La Lonchería). Sus clientes son distribuidores, cadenas de hostelería, tiendas gourmet, supermercados y empresas de catering.`
+      : `${negocio.nombre} ofrece: ${negocio.soluciones.join(', ')}.`;
+
+  const jsonStructure = `{
+  "sector": "sector específico y real de la empresa",
+  "contacto": "nombre completo del decisor (director general, gerente, responsable de producción o calidad)",
+  "cargo": "cargo exacto del decisor",
+  "telefono": "teléfono real de la empresa (vacío si no encontrado)",
+  "email": "email real de contacto (vacío si no encontrado)",
+  "direccion": "dirección postal de la empresa si la encuentras",
+  "localidad": "ciudad o municipio",
+  "provincia": "provincia española",
+
+  "encaje_nivel": 8,
+  "encaje_justificacion": "por qué encaja o no con los servicios de ${negocio.nombre} (2-3 frases)",
+
+  "problemas_detectados": ["problema operativo o estratégico real detectado 1", "problema 2", "problema 3"],
+  "necesidad_nivel": 7,
+
+  "oportunidades": [
+    {"problema": "problema concreto detectado", "solucion": "solución específica de ${negocio.nombre}", "impacto": "impacto económico o estratégico estimado"}
+  ],
+
+  "ahorro_potencial": "descripción del ahorro o valor económico que aportaría la solución",
+  "impacto_costes": "cómo impacta en la estructura de costes del cliente",
+  "relevancia_estrategica": "alta",
+
+  "capacidad_economica": "descripción de la solvencia o tamaño financiero estimado de la empresa",
+  "prob_inversion": 7,
+  "madurez_solucion": "si parece que ya conocen/usan este tipo de solución o es nueva para ellos",
+  "capacidad_compra": 7,
+
+  "probabilidad_cierre_pct": 65,
+  "probabilidad_justificacion": "justificación de la probabilidad basada en el encaje, capacidad y necesidad detectada",
+
+  "ticket_estimado": 45000,
+  "ticket_rango": "35.000€ – 60.000€",
+  "tipo_servicio_probable": "descripción del tipo de proyecto o servicio más probable",
+  "solucion_recomendada": "nombre exacto de la solución de la lista: ${negocio.soluciones.join(' / ')}",
+  "recurrencia": "puntual",
+  "justificacion_ticket": "justificación del ticket basada en el tamaño REAL de la empresa, su facturación estimada y el alcance probable del proyecto. NO uses valores genéricos, adapta al cliente.",
+
+  "score_0_100": 72,
+  "prioridad": "ALTA",
+
+  "canal_recomendado": "LinkedIn",
+  "mensaje_clave": "propuesta de valor principal adaptada a este cliente concreto (1-2 frases impactantes)",
+  "tipo_propuesta_inicial": "descripción del tipo de primera propuesta o acercamiento",
+  "proxima_accion": "acción comercial MUY concreta: quién llama, a quién, para qué y cuándo",
+
+  "notas": "resumen ejecutivo completo (4-6 frases): qué hace la empresa, tamaño, noticias o expansiones recientes, contexto del sector, y por qué es una oportunidad para ${negocio.nombre}"
+}`;
+
+  return {
+    instructions: `Eres un analista senior en desarrollo de negocio B2B con 15 años de experiencia en ventas industriales y alimentación. Tu misión es investigar empresas reales para identificar oportunidades comerciales con datos precisos y adaptados a cada cliente. NUNCA uses tickets o estimaciones genéricas — basa todo en el tamaño real, sector y situación de la empresa investigada. ${negocioCtx}`,
+
+    query: `Actúa como un analista senior en desarrollo de negocio B2B. Investiga en profundidad la empresa "${empresa}"${sector ? ' (sector: ' + sector + ')' : ''} en España.
+
+${notas ? 'Contexto previo conocido: ' + notas + '\n\n' : ''}BUSCA ACTIVAMENTE:
+1. Actividad exacta, tamaño real (empleados, facturación si disponible), presencia geográfica
+2. Noticias recientes (últimos 2 años): expansiones, inversiones, nuevas instalaciones, cambios de dirección
+3. Decisores: director general, gerente, director de operaciones, responsable de producción o calidad
+4. Datos de contacto reales: teléfono, email, web, LinkedIn
+5. Señales de compra: problemas operativos, búsquedas de proveedores, convocatorias, concursos públicos
+
+Elabora un análisis comercial completo con estas 8 secciones:
+1. Encaje de producto/servicio (0-10): ¿Cuán relevante es ${negocio.nombre} para este cliente?
+2. Problemas detectados y nivel de necesidad (0-10)
+3. Oportunidades comerciales concretas (problema → solución → impacto)
+4. Impacto económico esperado (ahorro, costes, relevancia estratégica)
+5. Capacidad de compra (solvencia, madurez, disposición a invertir 0-10)
+6. Probabilidad de cierre (%) con justificación
+7. Ticket estimado (ADAPTADO al tamaño real, rango ${ticketRange}) + solución recomendada
+8. Score 0-100 + prioridad (ALTA/MEDIA/BAJA) + estrategia de entrada
+
+Devuelve EXCLUSIVAMENTE este JSON válido (sin texto fuera del JSON):
+${jsonStructure}`
+  };
+}
+
 async function analyzeWithAI() {
   const empresa = document.getElementById('f-empresa').value.trim();
   if (!empresa) { toast('Escribe el nombre de la empresa primero', 'error'); return; }
 
   const apiKey = localStorage.getItem('ningenia_claude_key');
-  if (!apiKey) {
-    toast('Configura tu OpenAI API Key en ⚙ Configuración', 'error');
-    openSetupModal();
-    return;
-  }
+  if (!apiKey) { toast('Configura tu OpenAI API Key en ⚙ Configuración', 'error'); openSetupModal(); return; }
 
   const btn    = document.getElementById('btn-ai-analyze');
   const panel  = document.getElementById('ai-panel');
@@ -3431,61 +3536,27 @@ async function analyzeWithAI() {
   btn.textContent = '⏳';
   panel.style.display = 'block';
   document.getElementById('ai-empresa-label').textContent = empresa;
-  body.innerHTML = `<div style="text-align:center;padding:24px;color:#27ae60;font-size:13px;">
-    🔍 Buscando información sobre <strong>${esc(empresa)}</strong>...<br>
-    <small style="color:#95a5a6;">Analizando web, noticias y datos de contacto</small>
+  body.innerHTML = `<div style="text-align:center;padding:24px;color:#1a6b3c;font-size:13px;">
+    🔍 Investigando <strong>${esc(empresa)}</strong>...<br>
+    <small style="color:#95a5a6;">Análisis B2B senior · 8 secciones · web, noticias, LinkedIn</small>
   </div>`;
 
-  const instructions = negocio.id === 'ningenia'
-    ? `Eres un investigador comercial especializado en automatización industrial para Ningenia. Tu misión es buscar información REAL y ACTUAL sobre empresas para identificar oportunidades de venta. Soluciones de Ningenia: ${negocio.soluciones.join(', ')}. Tickets habituales entre 20.000€ y 300.000€. Busca en internet, noticias recientes, LinkedIn, web corporativa, directorios empresariales.`
-    : `Eres un investigador comercial especializado en productos ibéricos para La Lonchería del Jamón. Tu misión es buscar información REAL y ACTUAL sobre empresas para identificar oportunidades de maquila o marca propia. Servicios: ${negocio.soluciones.join(', ')}. Tickets habituales entre 5.000€ y 80.000€. Busca en internet, noticias recientes, LinkedIn, web corporativa, directorios empresariales.`;
-
-  const searchQuery = `Investiga a fondo la empresa "${empresa}"${sector ? ' del sector ' + sector : ''} en España.
-Busca:
-1. Qué hace exactamente, tamaño (empleados, facturación aproximada), presencia geográfica
-2. Noticias recientes, expansiones, inversiones o anuncios relevantes de los últimos 2 años
-3. Nombre del director general, gerente, responsable de producción o director de calidad
-4. Teléfono de contacto y email corporativo de la empresa
-5. Por qué podría necesitar los servicios de ${negocio.nombre}: ${negocio.soluciones.join(', ')}
-
-${notas ? 'Información adicional conocida: ' + notas : ''}
-
-Con toda esa información, devuelve EXCLUSIVAMENTE un JSON válido con esta estructura (sin texto fuera del JSON):
-{
-  "sector": "sector real y específico de la empresa",
-  "contacto": "nombre completo del director general, gerente, responsable de producción o calidad",
-  "cargo": "cargo exacto del contacto (Director General, Gerente, Responsable de Producción, etc.)",
-  "telefono": "teléfono de contacto de la empresa (solo si lo encuentras real)",
-  "email": "email corporativo o de contacto (solo si lo encuentras real)",
-  "notas": "resumen ejecutivo detallado: qué hace, tamaño, noticias relevantes recientes, contexto del mercado y por qué encaja con ${negocio.nombre}",
-  "oportunidades": ["oportunidad comercial concreta 1 basada en su actividad real", "oportunidad 2", "oportunidad 3"],
-  "solucion_recomendada": "la solución más adecuada de: ${negocio.soluciones.join(' / ')}",
-  "ticket_estimado": 50000,
-  "ticket_rango": "40.000€ – 70.000€",
-  "proxima_accion": "primera acción comercial muy concreta que debería hacer el comercial (ej: Llamar al Sr. X para presentar...)",
-  "probabilidad_fit": 7,
-  "justificacion_ticket": "justificación del ticket basada en el tamaño real y actividad de la empresa"
-}`;
+  const { instructions, query } = _b2bPrompt(empresa, sector, notas, negocio);
 
   try {
-    // Use Responses API with web_search_preview for real-time research
     const resp = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         tools: [{ type: 'web_search_preview' }],
         instructions,
-        input: searchQuery,
+        input: query,
       })
     });
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      // Fallback: try standard chat completions if Responses API unavailable
       if (resp.status === 404 || resp.status === 400) {
         return analyzeWithAIFallback(empresa, sector, notas, negocio, apiKey, btn, panel, body);
       }
@@ -3493,14 +3564,11 @@ Con toda esa información, devuelve EXCLUSIVAMENTE un JSON válido con esta estr
     }
 
     const data = await resp.json();
-    // Extract text from Responses API output
     let text = '';
     if (data.output) {
       for (const item of data.output) {
         if (item.type === 'message' && item.content) {
-          for (const c of item.content) {
-            if (c.type === 'output_text') { text = c.text; break; }
-          }
+          for (const c of item.content) { if (c.type === 'output_text') { text = c.text; break; } }
         }
       }
     }
@@ -3514,10 +3582,9 @@ Con toda esa información, devuelve EXCLUSIVAMENTE un JSON válido con esta estr
     window.aiSuggestions = parsed;
     applyAISuggestions(parsed);
     renderAIPanel(body, parsed);
-    toast('✅ Análisis completado y formulario rellenado', 'success');
+    toast('✅ Análisis B2B completado', 'success');
 
   } catch(err) {
-    // If Responses API not available, try fallback
     if (err.message.includes('404') || err.message.includes('fetch')) {
       return analyzeWithAIFallback(empresa, sector, notas, negocio, apiKey, btn, panel, body);
     }
@@ -3530,33 +3597,11 @@ Con toda esa información, devuelve EXCLUSIVAMENTE un JSON válido con esta estr
 }
 
 async function analyzeWithAIFallback(empresa, sector, notas, negocio, apiKey, btn, panel, body) {
-  // Fallback to standard chat completions (no web search)
   body.innerHTML = `<div style="text-align:center;padding:16px;color:#e67e22;font-size:12px;">
-    🔄 Usando análisis sin búsqueda web...<br><small style="color:#95a5a6;">La búsqueda en tiempo real no está disponible en tu plan</small>
+    🔄 Analizando sin búsqueda web...<br><small style="color:#95a5a6;">La búsqueda en tiempo real no está disponible en tu plan</small>
   </div>`;
 
-  const systemPrompt = negocio.id === 'ningenia'
-    ? `Eres un consultor experto en automatización industrial para Ningenia. Analiza empresas alimentarias e industriales para identificar oportunidades. Soluciones: ${negocio.soluciones.join(', ')}. Tickets entre 20.000€ y 300.000€.`
-    : `Eres un consultor experto en productos ibéricos para La Lonchería del Jamón. Analiza empresas para maquila o marca propia. Servicios: ${negocio.soluciones.join(', ')}. Tickets entre 5.000€ y 80.000€.`;
-
-  const userPrompt = `Empresa: "${empresa}"${sector ? '\nSector: ' + sector : ''}${notas ? '\nNotas: ' + notas : ''}
-
-Basándote en tu conocimiento de esta empresa, devuelve JSON:
-{
-  "sector": "sector de la empresa",
-  "contacto": "nombre del responsable si lo conoces",
-  "cargo": "cargo",
-  "telefono": "",
-  "email": "",
-  "notas": "descripción detallada de la empresa, actividad, tamaño estimado y por qué encaja con ${negocio.nombre}",
-  "oportunidades": ["oportunidad 1", "oportunidad 2", "oportunidad 3"],
-  "solucion_recomendada": "solución más adecuada de: ${negocio.soluciones.join(' / ')}",
-  "ticket_estimado": 50000,
-  "ticket_rango": "rango estimado",
-  "proxima_accion": "primera acción comercial recomendada",
-  "probabilidad_fit": 7,
-  "justificacion_ticket": "justificación del ticket"
-}`;
+  const { instructions, query } = _b2bPrompt(empresa, sector, notas, negocio);
 
   try {
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -3564,9 +3609,9 @@ Basándote en tu conocimiento de esta empresa, devuelve JSON:
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        max_tokens: 1200,
+        max_tokens: 2000,
         response_format: { type: 'json_object' },
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+        messages: [{ role: 'system', content: instructions }, { role: 'user', content: query }]
       })
     });
     if (!resp.ok) { const e = await resp.json().catch(()=>({})); throw new Error(e.error?.message || `HTTP ${resp.status}`); }
@@ -3577,7 +3622,7 @@ Basándote en tu conocimiento de esta empresa, devuelve JSON:
     window.aiSuggestions = parsed;
     applyAISuggestions(parsed);
     renderAIPanel(body, parsed);
-    toast('✅ Análisis completado y formulario rellenado', 'success');
+    toast('✅ Análisis B2B completado', 'success');
   } catch(err) {
     body.innerHTML = `<div style="color:#e74c3c;font-size:12px;padding:8px 0;">❌ Error: ${esc(err.message)}</div>`;
     toast('Error IA: ' + err.message, 'error');
@@ -3586,41 +3631,100 @@ Basándote en tu conocimiento de esta empresa, devuelve JSON:
   btn.textContent = '🤖 IA';
 }
 
-function renderAIPanel(body, parsed) {
-  const fitColor = (parsed.probabilidad_fit||0) >= 7 ? '#27ae60' : (parsed.probabilidad_fit||0) >= 4 ? '#e67e22' : '#e74c3c';
-  const fitBg    = (parsed.probabilidad_fit||0) >= 7 ? '#eafaf1' : (parsed.probabilidad_fit||0) >= 4 ? '#fef5e7' : '#fdedec';
-  const filledFields = [
-    parsed.sector        ? '✓ Sector'    : '',
-    parsed.contacto      ? '✓ Contacto'  : '',
-    parsed.telefono      ? '✓ Teléfono'  : '',
-    parsed.email         ? '✓ Email'     : '',
-    parsed.ticket_estimado ? '✓ Ticket'  : '',
-    parsed.solucion_recomendada ? '✓ Solución' : '',
-    parsed.proxima_accion ? '✓ Próx. acción' : '',
-    '✓ Notas',
-  ].filter(Boolean);
+function renderAIPanel(body, p) {
+  const score    = p.score_0_100 || 0;
+  const pcierre  = p.probabilidad_cierre_pct || 0;
+  const prioridad = (p.prioridad || 'MEDIA').toUpperCase();
+  const prioColor = prioridad === 'ALTA' ? '#c0392b' : prioridad === 'MEDIA' ? '#e67e22' : '#7f8c8d';
+  const prioBg    = prioridad === 'ALTA' ? '#fdedec' : prioridad === 'MEDIA' ? '#fef5e7' : '#f4f6f7';
+  const scoreColor = score >= 70 ? '#27ae60' : score >= 45 ? '#e67e22' : '#e74c3c';
+  const encajeBar = `<div style="height:6px;background:#e9ecef;border-radius:3px;margin-top:4px;">
+    <div style="height:6px;border-radius:3px;background:${scoreColor};width:${score}%;"></div></div>`;
+
+  const opps = (p.oportunidades || []).map(o => {
+    const oStr = typeof o === 'string' ? o : `<strong>${esc(o.problema||'')}</strong> → ${esc(o.solucion||'')}${o.impacto?' <em style="color:#7f8c8d;">('+esc(o.impacto)+')</em>':''}`;
+    return `<li style="margin-bottom:6px;">${oStr}</li>`;
+  }).join('');
+
+  const problemas = (p.problemas_detectados || []).map(pr => `<li>${esc(pr)}</li>`).join('');
 
   body.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-      <div style="background:white;border-radius:6px;padding:10px 12px;border:1px solid #c3e6cb;">
-        <div style="font-size:10px;font-weight:700;color:#7f8c8d;text-transform:uppercase;margin-bottom:4px;">Ticket Estimado</div>
-        <div style="font-size:22px;font-weight:800;color:#1a6b3c;">€${parseInt(parsed.ticket_estimado||0).toLocaleString('es-ES')}</div>
-        <div style="font-size:11px;color:#7f8c8d;">${esc(parsed.ticket_rango||'')}</div>
+    <!-- KPIs superiores -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div style="background:white;border-radius:6px;padding:8px 10px;border:1px solid #c3e6cb;text-align:center;">
+        <div style="font-size:9px;font-weight:700;color:#7f8c8d;text-transform:uppercase;margin-bottom:2px;">Score</div>
+        <div style="font-size:20px;font-weight:800;color:${scoreColor};">${score}</div>
+        ${encajeBar}
       </div>
-      <div style="background:${fitBg};border-radius:6px;padding:10px 12px;border:1px solid #c3e6cb;">
-        <div style="font-size:10px;font-weight:700;color:#7f8c8d;text-transform:uppercase;margin-bottom:4px;">Fit Comercial</div>
-        <div style="font-size:22px;font-weight:800;color:${fitColor};">${parsed.probabilidad_fit||'—'}/10</div>
-        <div style="font-size:11px;color:#7f8c8d;">Potencial de cierre</div>
+      <div style="background:${prioBg};border-radius:6px;padding:8px 10px;border:1px solid ${prioColor}33;text-align:center;">
+        <div style="font-size:9px;font-weight:700;color:#7f8c8d;text-transform:uppercase;margin-bottom:2px;">Prioridad</div>
+        <div style="font-size:14px;font-weight:800;color:${prioColor};">${prioridad}</div>
+        <div style="font-size:10px;color:#7f8c8d;">Cierre ${pcierre}%</div>
+      </div>
+      <div style="background:white;border-radius:6px;padding:8px 10px;border:1px solid #c3e6cb;text-align:center;">
+        <div style="font-size:9px;font-weight:700;color:#7f8c8d;text-transform:uppercase;margin-bottom:2px;">Ticket</div>
+        <div style="font-size:16px;font-weight:800;color:#1a6b3c;">€${parseInt(p.ticket_estimado||0).toLocaleString('es-ES')}</div>
+        <div style="font-size:9px;color:#7f8c8d;">${esc(p.ticket_rango||'')}</div>
       </div>
     </div>
-    <div style="margin-bottom:8px;font-size:12px;color:#1a6b3c;font-weight:700;">✅ Rellenado: ${filledFields.join(' · ')}</div>
-    ${parsed.contacto ? `<div style="margin-bottom:6px;font-size:12px;">👤 <strong>${esc(parsed.contacto)}</strong>${parsed.cargo?' · '+esc(parsed.cargo):''}</div>` : ''}
-    ${parsed.telefono ? `<div style="margin-bottom:4px;font-size:12px;">📞 ${esc(parsed.telefono)}</div>` : ''}
-    ${parsed.email    ? `<div style="margin-bottom:8px;font-size:12px;">✉ ${esc(parsed.email)}</div>` : ''}
-    <div style="margin-bottom:8px;font-size:12px;"><strong>🎯 Oportunidades:</strong>
-      <ul style="margin:4px 0 0 16px;line-height:1.8;">${(parsed.oportunidades||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
+
+    <!-- Contacto -->
+    ${p.contacto ? `<div style="background:#f8f9fa;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px;">
+      👤 <strong>${esc(p.contacto)}</strong>${p.cargo?' · <em>'+esc(p.cargo)+'</em>':''}
+      ${p.telefono?'<br>📞 '+esc(p.telefono):''}
+      ${p.email?'<br>✉ '+esc(p.email):''}
+      ${(p.localidad||p.provincia)?'<br>📍 '+[p.localidad,p.provincia].filter(Boolean).map(esc).join(', '):''}
+    </div>` : ''}
+
+    <!-- Encaje -->
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:#2c3e50;margin-bottom:3px;">① Encaje · ${p.encaje_nivel||'—'}/10</div>
+      <div style="font-size:11px;color:#555;line-height:1.5;">${esc(p.encaje_justificacion||'')}</div>
     </div>
-    <div style="margin-bottom:4px;font-size:11px;color:#7f8c8d;font-style:italic;">${esc(parsed.justificacion_ticket||'')}</div>
+
+    <!-- Problemas -->
+    ${problemas ? `<div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:#2c3e50;margin-bottom:3px;">② Problemas detectados · Necesidad ${p.necesidad_nivel||'—'}/10</div>
+      <ul style="margin:0 0 0 16px;font-size:11px;line-height:1.8;color:#555;">${problemas}</ul>
+    </div>` : ''}
+
+    <!-- Oportunidades -->
+    ${opps ? `<div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:#2c3e50;margin-bottom:3px;">③ Oportunidades comerciales</div>
+      <ul style="margin:0 0 0 16px;font-size:11px;line-height:1.8;color:#555;">${opps}</ul>
+    </div>` : ''}
+
+    <!-- Impacto + Capacidad -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div style="background:#eafaf1;border-radius:6px;padding:8px 10px;font-size:11px;">
+        <div style="font-weight:700;color:#1a6b3c;margin-bottom:3px;">④ Impacto económico</div>
+        <div style="color:#555;line-height:1.5;">${esc(p.ahorro_potencial||'')}${p.relevancia_estrategica?'<br><em>Relevancia: '+esc(p.relevancia_estrategica)+'</em>':''}</div>
+      </div>
+      <div style="background:#eaf4fb;border-radius:6px;padding:8px 10px;font-size:11px;">
+        <div style="font-weight:700;color:#1a3a6b;margin-bottom:3px;">⑤ Capacidad · ${p.capacidad_compra||'—'}/10</div>
+        <div style="color:#555;line-height:1.5;">${esc(p.capacidad_economica||'')}${p.madurez_solucion?'<br><em>'+esc(p.madurez_solucion)+'</em>':''}</div>
+      </div>
+    </div>
+
+    <!-- Probabilidad cierre -->
+    <div style="margin-bottom:8px;font-size:11px;">
+      <span style="font-weight:700;color:#2c3e50;">⑥ Prob. cierre ${pcierre}%</span>
+      <span style="color:#7f8c8d;"> · ${esc(p.probabilidad_justificacion||'')}</span>
+    </div>
+
+    <!-- Ticket detalle -->
+    <div style="margin-bottom:8px;font-size:11px;color:#555;font-style:italic;">
+      <strong style="color:#2c3e50;">⑦ Ticket:</strong> ${esc(p.justificacion_ticket||'')}
+      ${p.recurrencia?'<br><em>Recurrencia: '+esc(p.recurrencia)+'</em>':''}
+    </div>
+
+    <!-- Estrategia -->
+    <div style="background:#fff8e1;border-radius:6px;padding:8px 10px;margin-bottom:4px;font-size:11px;">
+      <div style="font-weight:700;color:#856404;margin-bottom:3px;">⑧ Estrategia de entrada</div>
+      ${p.canal_recomendado?`<div style="margin-bottom:2px;">📡 <strong>Canal:</strong> ${esc(p.canal_recomendado)}</div>`:''}
+      ${p.mensaje_clave?`<div style="margin-bottom:2px;">💬 <strong>Mensaje:</strong> ${esc(p.mensaje_clave)}</div>`:''}
+      ${p.proxima_accion?`<div style="color:#c0392b;font-weight:600;">→ ${esc(p.proxima_accion)}</div>`:''}
+    </div>
   `;
 }
 
@@ -3630,44 +3734,36 @@ function applyAISuggestions(s) {
 
   const set = (id, val) => { if (val) { const el = document.getElementById(id); if (el) el.value = val; } };
 
-  // Campos de texto
   set('f-sector',        s.sector);
   set('f-contacto',      s.contacto);
   set('f-cargo',         s.cargo);
   set('f-telefono',      s.telefono);
   set('f-email',         s.email);
+  set('f-direccion',     s.direccion);
+  set('f-localidad',     s.localidad);
+  set('f-provincia',     s.provincia);
   set('f-proxima-accion',s.proxima_accion);
   set('f-notas',         s.notas);
 
-  // Ticket estimado
   if (s.ticket_estimado) {
     const el = document.getElementById('f-ticket');
     if (el) el.value = parseInt(s.ticket_estimado) || '';
   }
 
-  // Solución — busca la opción más parecida en el select
   if (s.solucion_recomendada) {
     const sel = document.getElementById('f-solucion');
-    const target = s.solucion_recomendada.toLowerCase();
+    const target = (s.solucion_recomendada || '').toLowerCase();
     let best = '';
     for (const opt of sel.options) {
       if (!opt.value) continue;
       const optLow = opt.value.toLowerCase();
-      // Coincidencia directa o por primera palabra significativa
       if (target.includes(optLow.split(' ')[0]) || optLow.split(' ').some(w => w.length > 4 && target.includes(w))) {
         best = opt.value; break;
       }
     }
-    // Si no encontró coincidencia exacta, elige la primera opción no vacía
-    if (!best) {
-      for (const opt of sel.options) { if (opt.value) { best = opt.value; break; } }
-    }
+    if (!best) { for (const opt of sel.options) { if (opt.value) { best = opt.value; break; } } }
     if (best) sel.value = best;
   }
-
-  if (!s.sector) return; // ya fue aplicado desde analyzeWithAI automáticamente
-  document.getElementById('ai-panel').style.display = 'none';
-  toast('✅ Formulario rellenado con datos de la IA', 'success');
 }
 
 // ══════════════════════════════════════════════════════
