@@ -640,6 +640,78 @@ body {
 #opp-modal.view-mode #btn-ai-analyze { display: none !important; }
 #opp-modal.view-mode #ai-panel { display: none !important; }
 
+/* ── EDITOR DE NOTAS PANTALLA COMPLETA ── */
+#fulltext-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 8000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#fulltext-overlay.open { display: flex; }
+#fulltext-box {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#fulltext-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--blue-dark);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+#fulltext-header button {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+#fulltext-textarea {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 20px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+  min-height: 300px;
+  box-sizing: border-box;
+}
+#fulltext-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--gray-light);
+  flex-shrink: 0;
+}
+@media (max-width: 768px) {
+  #fulltext-overlay { padding: 0; align-items: flex-end; }
+  #fulltext-box { max-width: 100%; max-height: 95vh; border-radius: var(--radius) var(--radius) 0 0; }
+  #fulltext-textarea { font-size: 16px; } /* evita zoom automático en iOS */
+}
+
 /* ── MENÚ HAMBURGUESA (móvil) ── */
 #btn-hamburger {
   display: none;
@@ -1524,14 +1596,14 @@ body {
         <hr class="form-divider">
         <div class="form-section-title">📝 Notas</div>
         <div class="form-group full">
-          <textarea id="f-notas" placeholder="Observaciones, detalles del cliente, estado de la negociación..."></textarea>
+          <textarea id="f-notas" placeholder="Observaciones, detalles del cliente, estado de la negociación..." onclick="openFullText(this,'📝 Notas')" readonly style="cursor:pointer;background:#fafbfc;" title="Pulsa para editar en pantalla completa"></textarea>
         </div>
 
         <div class="form-section-title" id="historial-title" style="display:none;">📅 Historial de Actividad</div>
         <div class="historial-modal" id="modal-historial" style="display:none;"></div>
 
         <div class="add-nota-row" id="add-nota-row" style="display:none;">
-          <input type="text" id="nota-nueva" placeholder="Añadir nota al historial...">
+          <input type="text" id="nota-nueva" placeholder="Añadir nota al historial..." onclick="openFullText(this,'📝 Nueva nota al historial')" readonly style="cursor:pointer;background:#fafbfc;" title="Pulsa para escribir en pantalla completa">
           <button class="btn btn-secondary" onclick="addNota()">+ Nota</button>
         </div>
       </div>
@@ -1634,6 +1706,21 @@ body {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('setup-modal')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveFirebaseConfig()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR NOTAS PANTALLA COMPLETA -->
+<div id="fulltext-overlay" onclick="if(event.target===this)closeFullText()">
+  <div id="fulltext-box">
+    <div id="fulltext-header">
+      <span id="fulltext-title">📝 Notas</span>
+      <button onclick="closeFullText()" title="Cerrar">✕</button>
+    </div>
+    <textarea id="fulltext-textarea" spellcheck="true" placeholder="Escribe aquí..."></textarea>
+    <div id="fulltext-footer">
+      <button class="btn btn-secondary" onclick="closeFullText()">Cancelar</button>
+      <button class="btn btn-primary"   onclick="saveFullText()">💾 Guardar</button>
     </div>
   </div>
 </div>
@@ -2840,6 +2927,37 @@ async function reactivate(id) {
   await saveDoc(opp);
   toast('Oportunidad reactivada', 'success');
 }
+
+// ── EDITOR DE TEXTO PANTALLA COMPLETA ────────────
+let _fulltextTarget = null; // referencia al input/textarea original
+
+function openFullText(sourceEl, title) {
+  _fulltextTarget = sourceEl;
+  document.getElementById('fulltext-title').textContent = title || '📝 Notas';
+  document.getElementById('fulltext-textarea').value = sourceEl.value || '';
+  document.getElementById('fulltext-overlay').classList.add('open');
+  setTimeout(() => {
+    const ta = document.getElementById('fulltext-textarea');
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = ta.value.length;
+  }, 80);
+}
+
+function saveFullText() {
+  const val = document.getElementById('fulltext-textarea').value;
+  if (_fulltextTarget) {
+    _fulltextTarget.value = val;
+    // Disparar evento input para que frameworks/listeners detecten el cambio
+    _fulltextTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  closeFullText();
+}
+
+function closeFullText() {
+  document.getElementById('fulltext-overlay').classList.remove('open');
+  _fulltextTarget = null;
+}
+// ─────────────────────────────────────────────────
 
 async function addNota() {
   const input = document.getElementById('nota-nueva');
