@@ -1530,7 +1530,15 @@ body {
         </div>
         <div class="form-group">
           <label>Ticket Estimado (€)</label>
-          <input type="number" id="f-ticket" placeholder="0" min="0" step="500">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="f-ticket" placeholder="0" min="0" step="500" style="flex:1;">
+            <button type="button" id="btn-estimar-ia" onclick="estimarLoncheriaIA()"
+              style="display:none;white-space:nowrap;background:linear-gradient(135deg,#7D2436,#B03A2E);color:white;border:none;border-radius:var(--radius-sm);padding:8px 12px;cursor:pointer;font-size:12px;font-weight:700;"
+              title="Estimar solución y valor con IA según el perfil del cliente">
+              🤖 Estimar
+            </button>
+          </div>
+          <div id="estimar-ia-result" style="display:none;margin-top:8px;background:#fef9f0;border:1px solid #f0c040;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.6;color:#5a4000;"></div>
         </div>
         <div class="form-group">
           <label>Etapa</label>
@@ -1775,11 +1783,43 @@ const NEGOCIOS = {
       { id:'propuesta',   label:'Propuesta',           prob:0.60, color:'#c0392b' },
       { id:'pedido',      label:'Pedido',               prob:0.85, color:'#27ae60' },
     ],
-    soluciones: ['Maquila (cliente aporta materia prima)','Marca propia (producto terminado)','Ambas líneas'],
-    sectores:   ['Maquilero','Marca Blanca','Tienda Gourmet','Restaurante','Distribuidor','Otro'],
+    soluciones: [
+      'Marca Propia · Monodosis 20g',
+      'Marca Propia · Monodosis 25-35g',
+      'Marca Propia · Monodosis 35g',
+      'Marca Propia · Monodosis 70g',
+      'Marca Propia · Estándar 100g',
+      'Maquila · Monodosis 20g',
+      'Maquila · Monodosis 25-35g',
+      'Maquila · Monodosis 35g',
+      'Maquila · Monodosis 70g',
+      'Maquila · Estándar 100g',
+      'Combinado Marca Propia + Maquila',
+    ],
+    sectores: ['Hostelería / Restaurantes','Catering','Distribución alimentaria','Tienda Gourmet / Delicatessen','Marca Blanca / Retail','Maquilero industrial','Otro'],
     comerciales:['David'],
   }
 };
+
+// ── Tarifas Lonchería del Jamón (Escandallo Duroc 50%) ──────────────────
+const LONCHERIA_TARIFAS = {
+  marcaPropia: [
+    { formato:'Monodosis 20g',    peso:'20g',    udsKg:43,  costeUd:0.559, pvpMin:0.860, pvpMax:0.897 },
+    { formato:'Monodosis 25-35g', peso:'25-35g', udsKg:36,  costeUd:0.862, pvpMin:1.325, pvpMax:1.435 },
+    { formato:'Monodosis 35g',    peso:'35g',    udsKg:25,  costeUd:1.082, pvpMin:1.664, pvpMax:1.773 },
+    { formato:'Monodosis 70g',    peso:'70g',    udsKg:12,  costeUd:2.008, pvpMin:3.089, pvpMax:3.245 },
+    { formato:'Estándar 100g',    peso:'100g',   udsKg:9.5, costeUd:2.316, pvpMin:3.564, pvpMax:3.685 },
+  ],
+  maquila: [
+    { formato:'Monodosis 20g',    peso:'20g',    tarifaUdMin:0.216, tarifaUdMax:0.253, tarifaKgMin:9.30,  tarifaKgMax:10.86 },
+    { formato:'Monodosis 25-35g', peso:'25-35g', tarifaUdMin:0.556, tarifaUdMax:0.665, tarifaKgMin:20.03, tarifaKgMax:23.95 },
+    { formato:'Monodosis 35g',    peso:'35g',    tarifaUdMin:0.556, tarifaUdMax:0.665, tarifaKgMin:13.91, tarifaKgMax:16.63 },
+    { formato:'Monodosis 70g',    peso:'70g',    tarifaUdMin:0.781, tarifaUdMax:0.937, tarifaKgMin:9.38,  tarifaKgMax:11.25 },
+    { formato:'Estándar 100g',    peso:'100g',   tarifaUdMin:0.649, tarifaUdMax:0.770, tarifaKgMin:6.16,  tarifaKgMax:7.32  },
+  ],
+  condiciones: { materiaPrima:'Jamón Duroc 50%', precioMP:18, margen:0.35, capacidadPersonas:3, diasMes:22 },
+};
+// ──────────────────────────────────────────────────────────────────────────
 
 const LS_NEG = 'ningenia_current_negocio';
 let currentNegocio = localStorage.getItem(LS_NEG) || 'ningenia';
@@ -1913,7 +1953,12 @@ function updateFormSelects() {
   const fSol = document.getElementById('f-solucion');
   const fSolLabel = document.getElementById('f-solucion-label');
   if (fSol) fSol.innerHTML = '<option value="">Seleccionar...</option>' + n.soluciones.map(s=>`<option>${s}</option>`).join('');
-  if (fSolLabel) fSolLabel.textContent = 'Solución ' + n.nombre;
+  if (fSolLabel) fSolLabel.textContent = 'Formato / Solución';
+  // Botón IA estimación — solo visible en lonchería
+  const btnEstimar = document.getElementById('btn-estimar-ia');
+  if (btnEstimar) btnEstimar.style.display = currentNegocio === 'loncheria' ? '' : 'none';
+  const resEstimar = document.getElementById('estimar-ia-result');
+  if (resEstimar) resEstimar.style.display = 'none';
   // Etapa select
   const fEtapa = document.getElementById('f-etapa');
   if (fEtapa) fEtapa.innerHTML = [
@@ -2932,6 +2977,84 @@ async function reactivate(id) {
   opp.historial.unshift({ fecha: today(), tipo: 'cambio_etapa', etapaAnterior: 'descartado', etapaNueva: 'prospecto', nota: 'Reactivada', comercial: '' });
   await saveDoc(opp);
   toast('Oportunidad reactivada', 'success');
+}
+
+// ══════════════════════════════════════
+// ESTIMACIÓN IA — LONCHERÍA DEL JAMÓN
+// ══════════════════════════════════════
+async function estimarLoncheriaIA() {
+  const apiKey = localStorage.getItem('ningenia_claude_key') || '';
+  if (!apiKey) { toast('Configura la OpenAI API Key en ⚙ Config', 'error'); return; }
+
+  const empresa  = document.getElementById('f-empresa')?.value.trim()  || '';
+  const sector   = document.getElementById('f-sector')?.value.trim()   || '';
+  const contacto = document.getElementById('f-contacto')?.value.trim() || '';
+  const cargo    = document.getElementById('f-cargo')?.value.trim()    || '';
+  const notas    = document.getElementById('f-notas')?.value.trim()    || '';
+  const negocio  = document.getElementById('f-negocio')?.value?.trim() || 'loncheria';
+
+  if (!empresa) { toast('Introduce al menos el nombre de la empresa', 'error'); return; }
+
+  const btn = document.getElementById('btn-estimar-ia');
+  const res = document.getElementById('estimar-ia-result');
+  btn.textContent = '⏳ Analizando...';
+  btn.disabled = true;
+  res.style.display = 'none';
+
+  const tarifasTexto = `
+TARIFA MARCA PROPIA (producto terminado — incluye jamón Duroc 50%, loncheado, envase y marca):
+${LONCHERIA_TARIFAS.marcaPropia.map(t =>
+  `  · ${t.formato} (${t.peso}): Coste/ud ${t.costeUd}€ | PVP min ${t.pvpMin}€ | PVP max ${t.pvpMax}€ | ${t.udsKg} uds/kg`
+).join('\n')}
+
+TARIFA MAQUILA (el cliente aporta la materia prima; La Lonchería pone loncheado + envase):
+${LONCHERIA_TARIFAS.maquila.map(t =>
+  `  · ${t.formato} (${t.peso}): Tarifa/ud ${t.tarifaUdMin}€–${t.tarifaUdMax}€ | Tarifa/kg ${t.tarifaKgMin}€–${t.tarifaKgMax}€`
+).join('\n')}
+
+Precio materia prima actual: ${LONCHERIA_TARIFAS.condiciones.precioMP}€/kg de jamón Duroc 50%.
+Capacidad máxima del obrador: ${LONCHERIA_TARIFAS.condiciones.capacidadPersonas} personas, ${LONCHERIA_TARIFAS.condiciones.diasMes} días/mes.`;
+
+  const messages = [
+    { role: 'system', content: 'Eres un asesor comercial experto en alimentación gourmet y loncheados de jamón ibérico. Analiza el perfil del cliente potencial y estima la propuesta comercial más adecuada. Responde SOLO con JSON.' },
+    { role: 'user', content: `TARIFAS DE LA LONCHERÍA DEL JAMÓN:\n${tarifasTexto}\n\nCLIENTE POTENCIAL:\n- Empresa: ${empresa}\n- Sector: ${sector}\n- Contacto: ${contacto} (${cargo})\n- Notas: ${notas || 'Sin notas'}\n\nBasándote en el tipo de cliente (sector, tamaño estimado, necesidades), determina:\n1. ¿Qué modalidad encaja mejor — Marca Propia, Maquila o Combinado?\n2. ¿Qué formato(s) son más adecuados para este cliente?\n3. ¿Cuántas unidades mensuales estimadas podría necesitar?\n4. ¿Cuál es el valor anual estimado del contrato?\n5. Justificación breve (2-3 frases).\n\nResponde con este JSON:\n{\n  "modalidad": "Marca Propia|Maquila|Combinado",\n  "formato": "nombre exacto del formato recomendado (ej: Marca Propia · Monodosis 70g)",\n  "uds_mes": 5000,\n  "valor_anual": 85000,\n  "rango_min": 60000,\n  "rango_max": 110000,\n  "justificacion": "texto breve"\n}` }
+  ];
+
+  try {
+    const payload = JSON.stringify({ model:'gpt-4o-mini', max_tokens:600, response_format:{type:'json_object'}, messages });
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${apiKey}` },
+      body: payload,
+    });
+    if (!resp.ok) throw new Error('Error API: ' + resp.status);
+    const data = await resp.json();
+    const result = JSON.parse(data.choices[0].message.content);
+
+    // Rellenar campos del formulario
+    const fSol    = document.getElementById('f-solucion');
+    const fTicket = document.getElementById('f-ticket');
+    if (fSol && result.formato) {
+      const opt = [...fSol.options].find(o => o.value === result.formato || o.text === result.formato);
+      if (opt) fSol.value = opt.value;
+    }
+    if (fTicket && result.valor_anual) fTicket.value = result.valor_anual;
+
+    // Mostrar resumen
+    const fmt = n => n ? n.toLocaleString('es-ES') : '—';
+    res.innerHTML = `<strong>🤖 Estimación IA</strong><br>
+      <b>Modalidad:</b> ${result.modalidad || '—'} &nbsp;|&nbsp; <b>Formato:</b> ${result.formato || '—'}<br>
+      <b>Uds/mes estimadas:</b> ${fmt(result.uds_mes)} &nbsp;|&nbsp; <b>Valor anual:</b> ${fmt(result.valor_anual)}€<br>
+      <b>Rango:</b> ${fmt(result.rango_min)}€ – ${fmt(result.rango_max)}€<br>
+      <span style="color:#7a5700;">${result.justificacion || ''}</span>`;
+    res.style.display = 'block';
+    toast('✅ Estimación completada', 'success');
+  } catch (e) {
+    toast('Error IA: ' + e.message, 'error');
+  } finally {
+    btn.textContent = '🤖 Estimar';
+    btn.disabled = false;
+  }
 }
 
 // ── EDITOR DE TEXTO PANTALLA COMPLETA ────────────
