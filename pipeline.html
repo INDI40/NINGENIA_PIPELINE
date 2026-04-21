@@ -1885,13 +1885,38 @@ async function initFirebase() {
     firebaseDb  = { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, db };
     firebaseAuth = auth;
 
-    onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) {
-        currentUser = null;
-        showLoginScreen();
-        return;
+    const USER_CACHE_KEY = 'ningenia_uprf_';
+
+    function enterApp(fbUser, ud) {
+      localStorage.setItem(USER_CACHE_KEY + fbUser.uid, JSON.stringify(ud));
+      currentUser = { uid: fbUser.uid, ...ud };
+      hideLoginScreen();
+      applyRoleUI();
+      startFirestoreListener(db);
+    }
+
+    async function loadUserProfile(fbUser, attempt) {
+      attempt = attempt || 1;
+
+      // ── Intento 1: usar caché de localStorage para entrada inmediata ──
+      if (attempt === 1) {
+        const cached = localStorage.getItem(USER_CACHE_KEY + fbUser.uid);
+        if (cached) {
+          try {
+            const ud = JSON.parse(cached);
+            if (ud.activo !== false) {
+              enterApp(fbUser, ud);
+              // Refresca el perfil en background sin bloquear
+              getDoc(doc(db, 'usuarios', fbUser.uid)).then(snap => {
+                if (snap.exists()) localStorage.setItem(USER_CACHE_KEY + fbUser.uid, JSON.stringify(snap.data()));
+              }).catch(() => {});
+              return;
+            }
+          } catch {}
+        }
       }
 
+      // ── Sin caché: leer de Firestore con reintentos ──
       try {
         const userSnap = await getDoc(doc(db, 'usuarios', fbUser.uid));
         if (!userSnap.exists()) {
@@ -1910,18 +1935,35 @@ async function initFirebase() {
           showLoginScreen('Tu cuenta está desactivada. Contacta con el administrador.');
           return;
         }
-        currentUser = { uid: fbUser.uid, ...ud };
-        hideLoginScreen();
-        applyRoleUI();
-        startFirestoreListener(db);
+        enterApp(fbUser, ud);
       } catch (e) {
+        const isOffline = e.code === 'unavailable' || (e.message && e.message.toLowerCase().includes('offline'));
+        if (isOffline && attempt <= 4) {
+          showLoginScreen('Conectando... (intento ' + attempt + '/4)');
+          setTimeout(() => loadUserProfile(fbUser, attempt + 1), attempt * 2000);
+          return;
+        }
+        // Último recurso: si hay caché aunque sea, úsala
+        const cached = localStorage.getItem(USER_CACHE_KEY + fbUser.uid);
+        if (cached) {
+          try { enterApp(fbUser, JSON.parse(cached)); return; } catch {}
+        }
         const msg = e.code === 'permission-denied'
-          ? 'Sin permisos en Firestore. Revisa las Reglas de Firestore en Firebase Console.'
+          ? 'Sin permisos en Firestore. Revisa las Reglas en Firebase Console.'
           : 'Error al cargar perfil: ' + e.message;
         try { await signOut(auth); } catch {}
         currentUser = null;
         showLoginScreen(msg);
       }
+    }
+
+    onAuthStateChanged(auth, async (fbUser) => {
+      if (!fbUser) {
+        currentUser = null;
+        showLoginScreen();
+        return;
+      }
+      loadUserProfile(fbUser, 1);
     });
 
     setSyncStatus('cloud');
