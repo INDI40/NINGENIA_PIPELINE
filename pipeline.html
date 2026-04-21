@@ -1596,14 +1596,20 @@ body {
         <hr class="form-divider">
         <div class="form-section-title">📝 Notas</div>
         <div class="form-group full">
-          <textarea id="f-notas" placeholder="Observaciones, detalles del cliente, estado de la negociación..." onclick="openFullText(this,'📝 Notas')" readonly style="cursor:pointer;background:#fafbfc;" title="Pulsa para editar en pantalla completa"></textarea>
+          <div onclick="openFullText(document.getElementById('f-notas'),'📝 Notas')" style="position:relative;cursor:pointer;" title="Pulsa para editar en pantalla completa">
+            <textarea id="f-notas" placeholder="Toca para añadir notas..." style="pointer-events:none;cursor:pointer;background:#fafbfc;min-height:80px;width:100%;resize:none;" readonly tabindex="-1"></textarea>
+            <div style="position:absolute;inset:0;border-radius:var(--radius-sm);"></div>
+          </div>
         </div>
 
         <div class="form-section-title" id="historial-title" style="display:none;">📅 Historial de Actividad</div>
         <div class="historial-modal" id="modal-historial" style="display:none;"></div>
 
         <div class="add-nota-row" id="add-nota-row" style="display:none;">
-          <input type="text" id="nota-nueva" placeholder="Añadir nota al historial..." onclick="openFullText(this,'📝 Nueva nota al historial')" readonly style="cursor:pointer;background:#fafbfc;" title="Pulsa para escribir en pantalla completa">
+          <div onclick="openFullText(document.getElementById('nota-nueva'),'📝 Nueva nota al historial')" style="position:relative;cursor:pointer;flex:1;" title="Pulsa para escribir en pantalla completa">
+            <input type="text" id="nota-nueva" placeholder="Toca para añadir nota..." style="pointer-events:none;cursor:pointer;background:#fafbfc;width:100%;" readonly tabindex="-1">
+            <div style="position:absolute;inset:0;"></div>
+          </div>
           <button class="btn btn-secondary" onclick="addNota()">+ Nota</button>
         </div>
       </div>
