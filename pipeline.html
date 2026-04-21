@@ -638,7 +638,7 @@ body {
   color: var(--text-light);
 }
 #opp-modal.view-mode #btn-ai-analyze { display: none !important; }
-#opp-modal.view-mode #ai-panel { display: none !important; }
+#opp-modal.view-mode #ai-panel-footer { display: none !important; }
 
 /* ── EDITOR DE NOTAS PANTALLA COMPLETA ── */
 #fulltext-overlay {
@@ -1476,7 +1476,7 @@ body {
       <!-- AI ANALYSIS PANEL -->
       <div id="ai-panel" style="display:none;margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid #c3e6cb;">
         <div id="ai-panel-header" style="background:linear-gradient(135deg,#1a6b3c,#27ae60);color:white;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-weight:700;font-size:13px;">🤖 Análisis IA — <span id="ai-empresa-label"></span></span>
+          <span style="font-weight:700;font-size:13px;">🤖 Análisis IA — <span id="ai-empresa-label"></span><span id="ai-fecha-label" style="font-weight:400;font-size:11px;opacity:0.8;margin-left:8px;"></span></span>
           <button onclick="document.getElementById('ai-panel').style.display='none'" style="background:none;border:none;color:white;cursor:pointer;font-size:16px;">✕</button>
         </div>
         <div id="ai-panel-body" style="background:#f0faf5;padding:14px 16px;font-size:12px;line-height:1.6;"></div>
@@ -2813,7 +2813,6 @@ function openViewModal(id) {
   toggleCierreSection();
 
   // Hide edit-only controls
-  document.getElementById('ai-panel').style.display = 'none';
   document.getElementById('btn-discard').style.display = 'none';
   document.getElementById('btn-cerrar').style.display = 'none';
   document.getElementById('btn-save').style.display = 'none';
@@ -2898,6 +2897,12 @@ function clearForm() {
   document.getElementById('modal-historial').innerHTML = '';
   document.getElementById('modal-historial').style.display = 'none';
   document.getElementById('historial-title').style.display = 'none';
+  // Limpiar análisis IA
+  window.aiSuggestions = null;
+  const _ap = document.getElementById('ai-panel');
+  if (_ap) _ap.style.display = 'none';
+  const _afl = document.getElementById('ai-fecha-label');
+  if (_afl) _afl.textContent = '';
 }
 
 function fillForm(opp) {
@@ -2912,6 +2917,21 @@ function fillForm(opp) {
   document.getElementById('f-etapa').value = opp.etapa || 'prospecto';
   document.getElementById('f-comercial').value = opp.comercial || 'David';
   toggleCierreSection();
+
+  // Restaurar análisis IA guardado
+  const aiPanel = document.getElementById('ai-panel');
+  const aiBody  = document.getElementById('ai-panel-body');
+  if (opp.aiAnalysis && aiPanel && aiBody) {
+    window.aiSuggestions = opp.aiAnalysis;
+    document.getElementById('ai-empresa-label').textContent = opp.empresa;
+    document.getElementById('ai-fecha-label').textContent   = opp.aiAnalysis._fechaAnalisis ? '· ' + opp.aiAnalysis._fechaAnalisis : '';
+    renderAIPanel(aiBody, opp.aiAnalysis);
+    aiPanel.style.display = 'block';
+  } else if (aiPanel) {
+    aiPanel.style.display = 'none';
+    window.aiSuggestions  = null;
+    document.getElementById('ai-fecha-label').textContent = '';
+  }
 }
 
 function toggleCierreSection() {
@@ -2944,6 +2964,8 @@ async function saveOportunidad() {
   opp.fechaAccion    = document.getElementById('f-fecha-accion').value;
   opp.fechaContacto  = document.getElementById('f-fecha-contacto').value;
   opp.notas          = document.getElementById('f-notas').value.trim();
+  // Persistir análisis IA (conserva el guardado previo si no se lanzó uno nuevo)
+  opp.aiAnalysis     = window.aiSuggestions || opp.aiAnalysis || null;
   if (opp.etapa === 'cerrado') {
     opp.ticketReal  = parseFloat(document.getElementById('f-ticket-real').value) || opp.ticketEstimado;
     opp.fechaCierre = document.getElementById('f-fecha-cierre').value || today();
@@ -3579,7 +3601,9 @@ async function analyzeWithAI() {
     if (jsonMatch) { try { parsed = JSON.parse(jsonMatch[0]); } catch(e) { throw new Error('JSON inválido en la respuesta'); } }
     else throw new Error('La IA no devolvió JSON');
 
+    parsed._fechaAnalisis = fmtDate(today());
     window.aiSuggestions = parsed;
+    document.getElementById('ai-fecha-label').textContent = '· ' + parsed._fechaAnalisis;
     applyAISuggestions(parsed);
     renderAIPanel(body, parsed);
     toast('✅ Análisis B2B completado', 'success');
@@ -3619,7 +3643,9 @@ async function analyzeWithAIFallback(empresa, sector, notas, negocio, apiKey, bt
     const text = data.choices?.[0]?.message?.content || '';
     let parsed;
     try { parsed = JSON.parse(text); } catch { const m = text.match(/\{[\s\S]*\}/); if(m) parsed = JSON.parse(m[0]); else throw new Error('JSON inválido'); }
+    parsed._fechaAnalisis = fmtDate(today());
     window.aiSuggestions = parsed;
+    document.getElementById('ai-fecha-label').textContent = '· ' + parsed._fechaAnalisis;
     applyAISuggestions(parsed);
     renderAIPanel(body, parsed);
     toast('✅ Análisis B2B completado', 'success');
