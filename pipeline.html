@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pipeline Comercial — Ningenia</title>
+<title>INDI 4.0 Pipeline</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1F4E79">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1219,7 +1219,7 @@ body {
   <div class="login-box">
     <div class="login-logo">
       <span class="login-icon">⬡</span>
-      <h1>Pipeline Comercial</h1>
+      <h1>INDI 4.0 Pipeline</h1>
       <p>Ningenia · La Lonchería del Jamón</p>
     </div>
     <div class="login-field">
@@ -1234,7 +1234,7 @@ body {
     <div class="login-error" id="login-error"></div>
   </div>
   <div class="login-footer">
-    <span style="font-size:11px;opacity:0.5;color:white;">Pipeline Comercial · ningenia-pipeline</span>
+    <span style="font-size:11px;opacity:0.5;color:white;">INDI 4.0 Pipeline · ningenia-pipeline</span>
   </div>
 </div>
 
@@ -1310,7 +1310,7 @@ body {
 <div id="header">
   <div class="brand">
     <span>⬡</span>
-    <span>Ningenia — Pipeline Comercial</span>
+    <span>INDI 4.0 Pipeline</span>
   </div>
   <div id="sync-status">
     <div id="sync-dot"></div>
@@ -1934,7 +1934,7 @@ function switchNegocio(id) {
   // Apply theme
   applyTheme();
   // Update header
-  document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — Pipeline Comercial';
+  document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — INDI 4.0 Pipeline';
   document.querySelectorAll('.neg-btn').forEach(b => {
     const isActive = b.dataset.neg === id;
     b.classList.toggle('active', isActive);
@@ -3264,7 +3264,7 @@ document.querySelectorAll('.neg-btn').forEach(b => {
   b.style.borderColor = isActive ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)';
 });
 // Update brand title
-document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — Pipeline Comercial';
+document.querySelector('.brand span:last-child').textContent = neg().icono + ' ' + neg().nombre + ' — INDI 4.0 Pipeline';
 // Update form selects
 updateFormSelects();
 // Mostrar login — Firebase Auth lo ocultará cuando la sesión sea válida
