@@ -1109,16 +1109,7 @@ body {
     <div class="login-error" id="login-error"></div>
   </div>
   <div class="login-footer">
-    <button onclick="
-      var sm = document.getElementById('setup-modal');
-      if(sm){ sm.classList.add('open'); sm.style.cssText='display:flex!important;z-index:9999!important;'; }
-    " style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:13px;">⚙ Configurar Firebase</button>
-    <button onclick="
-      if(confirm('¿Borrar la configuración guardada y reconfigurar?')){
-        localStorage.removeItem('ningenia_firebase_cfg');
-        location.reload();
-      }
-    " style="background:rgba(231,76,60,0.25);border:1px solid rgba(231,76,60,0.4);color:white;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:13px;">🗑 Resetear config</button>
+    <span style="font-size:11px;opacity:0.5;color:white;">Pipeline Comercial · ningenia-pipeline</span>
   </div>
 </div>
 
@@ -1540,57 +1531,20 @@ body {
   </div>
 </div>
 
-<!-- FIREBASE SETUP MODAL -->
+<!-- SETUP MODAL (solo API keys opcionales) -->
 <div class="modal-overlay" id="setup-modal">
-  <div class="modal" style="max-width:540px;">
+  <div class="modal" style="max-width:480px;">
     <div class="modal-header">
-      <h2>⚙ Configuración — Sincronización Cloud</h2>
+      <h2>⚙ Configuración</h2>
       <button class="modal-close" onclick="closeModal('setup-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="setup-step">
-        <strong>1.</strong> Ve a <strong>console.firebase.google.com</strong> e inicia sesión con tu cuenta Google.
+      <div style="background:var(--blue-pale);border:1px solid var(--blue-light);border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--blue-dark);">
+        ✅ Firebase configurado — proyecto <strong>ningenia-pipeline</strong>
       </div>
-      <div class="setup-step">
-        <strong>2.</strong> Crea un proyecto (ej: <code>ningenia-pipeline</code>), activa <strong>Firestore Database</strong> en modo producción.
-      </div>
-      <div class="setup-step">
-        <strong>3.</strong> En Configuración del proyecto → Tus apps → añade app Web (<code>&lt;/&gt;</code>). Copia los datos de configuración.
-      </div>
-      <div class="setup-step">
-        <strong>4.</strong> En <strong>Firestore → Reglas</strong>, pega esto para permitir acceso:<br>
-        <code>rules_version='2'; service cloud.firestore { match /databases/{db}/documents { match /{document=**} { allow read, write: if true; } } }</code>
-      </div>
-      <div class="form-grid" style="margin-top:16px;">
-        <div class="form-group full">
-          <label>API Key</label>
-          <input type="text" id="cfg-apiKey" placeholder="AIzaSy...">
-        </div>
-        <div class="form-group full">
-          <label>Auth Domain</label>
-          <input type="text" id="cfg-authDomain" placeholder="mi-proyecto.firebaseapp.com">
-        </div>
-        <div class="form-group full">
-          <label>Project ID</label>
-          <input type="text" id="cfg-projectId" placeholder="mi-proyecto">
-        </div>
-        <div class="form-group">
-          <label>Storage Bucket</label>
-          <input type="text" id="cfg-storageBucket" placeholder="mi-proyecto.appspot.com">
-        </div>
-        <div class="form-group">
-          <label>Messaging Sender ID</label>
-          <input type="text" id="cfg-messagingSenderId" placeholder="123456789">
-        </div>
-        <div class="form-group full">
-          <label>App ID</label>
-          <input type="text" id="cfg-appId" placeholder="1:123:web:abc">
-        </div>
-      </div>
-      <hr style="margin:16px 0 12px;border:none;border-top:1px solid var(--gray-light);">
       <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px;">🤖 Inteligencia Artificial — ChatGPT (opcional)</div>
       <div class="setup-step" style="margin-bottom:10px;">
-        Consigue tu API Key en <strong>platform.openai.com</strong> → API Keys. Se usa solo localmente desde tu navegador para analizar prospectos.
+        Consigue tu API Key en <strong>platform.openai.com</strong> → API Keys.
       </div>
       <div class="form-grid">
         <div class="form-group full">
@@ -1601,7 +1555,7 @@ body {
       <hr style="margin:16px 0 12px;border:none;border-top:1px solid var(--gray-light);">
       <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px;">📧 Sincronización de Correo (opcional)</div>
       <div class="setup-step" style="margin-bottom:10px;">
-        Requiere tener <strong>iniciar_servidor.bat</strong> en ejecución en tu PC. El pipeline revisará tu correo al abrirse y actualizará las fichas automáticamente.
+        Requiere <strong>iniciar_servidor.bat</strong> en ejecución en tu PC.
       </div>
       <div class="form-grid">
         <div class="form-group full">
@@ -1610,47 +1564,9 @@ body {
         </div>
       </div>
     </div>
-    <div id="migrate-banner" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin:0 20px 12px;font-size:13px;color:#856404;">
-      ⚠ Tienes <strong id="migrate-count">0</strong> oportunidades guardadas en local. ¿Subirlas a Firebase?
-      <button class="btn btn-primary" style="margin-left:10px;padding:5px 12px;font-size:12px;" onclick="syncLocalToFirebase()">📤 Subir a Firebase</button>
-    </div>
-    <!-- Auth & Rules instructions -->
-    <div style="background:#f0f4f8;border:1px solid var(--blue-light);border-radius:6px;padding:14px 16px;margin:0 20px 12px;">
-      <div style="font-weight:700;font-size:12px;color:var(--blue-dark);margin-bottom:8px;">🔐 PASOS OBLIGATORIOS (una sola vez en Firebase Console)</div>
-      <div style="font-size:12px;color:var(--text);line-height:1.8;">
-        <b>1.</b> <b>Authentication</b> → Comenzar → Correo/Contraseña → <b>Activar</b><br>
-        <b>2.</b> Authentication → <b>Usuarios</b> → Añadir usuario (tu email + contraseña)<br>
-        <b>3.</b> Firestore → <b>Reglas</b> → Reemplazar con:<br>
-        <pre style="background:white;border:1px solid #d0d7de;border-radius:4px;padding:8px;font-size:11px;margin:6px 0;overflow-x:auto;white-space:pre;">rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function activo() {
-      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.activo == true;
-    }
-    function esAdmin() {
-      return activo() &&
-        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
-    }
-    match /oportunidades/{id} {
-      allow read, write: if request.auth != null && activo();
-    }
-    match /usuarios/{uid} {
-      allow read:   if request.auth != null && activo();
-      allow write:  if request.auth != null && esAdmin();
-      allow create: if request.auth != null && request.auth.uid == uid;
-    }
-  }
-}</pre>
-        <b>4.</b> Guarda la configuración aquí abajo y <b>recarga la página</b> → aparecerá el login
-      </div>
-    </div>
-    <div id="migrate-banner" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin:0 20px 12px;font-size:13px;color:#856404;">
-      ⚠ Tienes <strong id="migrate-count">0</strong> oportunidades guardadas en local. ¿Subirlas a Firebase?
-      <button class="btn btn-primary" style="margin-left:10px;padding:5px 12px;font-size:12px;" onclick="syncLocalToFirebase()">📤 Subir a Firebase</button>
-    </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="useLocalMode()">Solo guardar API keys</button>
-      <button class="btn btn-primary" onclick="saveFirebaseConfig()">Conectar Firebase</button>
+      <button class="btn btn-secondary" onclick="closeModal('setup-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveFirebaseConfig()">💾 Guardar</button>
     </div>
   </div>
 </div>
@@ -1853,10 +1769,21 @@ function updateFormSelects() {
 // ══════════════════════════════════════
 const LS_KEY = 'ningenia_pipeline_data';
 const LS_CFG = 'ningenia_firebase_cfg';
+const LS_UPROF = 'ningenia_uprof_';  // caché perfil de usuario
 
-let currentUser  = null;  // { uid, nombre, rol, email, activo }
-let firebaseAuth = null;  // Firebase Auth instance
-let firebaseMod  = null;  // Firebase module refs
+// ── Configuración Firebase fija ────────────────────
+const FIREBASE_CFG = {
+  apiKey:            'AIzaSyAG9CZkr7lSZ_ntTWXJwUZ1l0JxfroZVjg',
+  authDomain:        'ningenia-pipeline.firebaseapp.com',
+  projectId:         'ningenia-pipeline',
+  storageBucket:     'ningenia-pipeline.firebasestorage.app',
+  messagingSenderId: '487479899947',
+  appId:             '1:487479899947:web:2112add1d1e92e4d1e776e',
+};
+
+let currentUser  = null;
+let firebaseAuth = null;
+let firebaseMod  = null;
 
 function getVisibleData() {
   if (!currentUser) return [];
@@ -1865,97 +1792,22 @@ function getVisibleData() {
 }
 
 async function initFirebase() {
-  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
-  if (!cfg || !cfg.apiKey) {
-    showLoginScreen('Configura Firebase en ⚙ Config antes de iniciar sesión.');
-    return;
-  }
   showFirebaseError(null);
-
   try {
-    const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
-    const { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
-    const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js');
+    const { initializeApp, getApps, getApp } =
+      await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+    const { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp } =
+      await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
+    const { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } =
+      await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js');
 
-    const app  = getApps().length ? getApp() : initializeApp(cfg);
+    const app  = getApps().length ? getApp() : initializeApp(FIREBASE_CFG);
     const db   = getFirestore(app);
     const auth = getAuth(app);
 
-    firebaseMod = { initializeApp, getApps, getApp, getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, cfg };
-    firebaseDb  = { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, db };
+    firebaseMod  = { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc, serverTimestamp, signInWithEmailAndPassword, signOut };
+    firebaseDb   = { db, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp };
     firebaseAuth = auth;
-
-    const USER_CACHE_KEY = 'ningenia_uprf_';
-
-    function enterApp(fbUser, ud) {
-      localStorage.setItem(USER_CACHE_KEY + fbUser.uid, JSON.stringify(ud));
-      currentUser = { uid: fbUser.uid, ...ud };
-      hideLoginScreen();
-      applyRoleUI();
-      startFirestoreListener(db);
-    }
-
-    async function loadUserProfile(fbUser, attempt) {
-      attempt = attempt || 1;
-
-      // ── Intento 1: usar caché de localStorage para entrada inmediata ──
-      if (attempt === 1) {
-        const cached = localStorage.getItem(USER_CACHE_KEY + fbUser.uid);
-        if (cached) {
-          try {
-            const ud = JSON.parse(cached);
-            if (ud.activo !== false) {
-              enterApp(fbUser, ud);
-              // Refresca el perfil en background sin bloquear
-              getDoc(doc(db, 'usuarios', fbUser.uid)).then(snap => {
-                if (snap.exists()) localStorage.setItem(USER_CACHE_KEY + fbUser.uid, JSON.stringify(snap.data()));
-              }).catch(() => {});
-              return;
-            }
-          } catch {}
-        }
-      }
-
-      // ── Sin caché: leer de Firestore con reintentos ──
-      try {
-        const userSnap = await getDoc(doc(db, 'usuarios', fbUser.uid));
-        if (!userSnap.exists()) {
-          const allUsers = await getDocs(collection(db, 'usuarios'));
-          if (allUsers.empty) {
-            showFirstAdminSetup(fbUser);
-          } else {
-            await signOut(auth);
-            showLoginScreen('Tu cuenta no está autorizada. Contacta con el administrador.');
-          }
-          return;
-        }
-        const ud = userSnap.data();
-        if (!ud.activo) {
-          await signOut(auth);
-          showLoginScreen('Tu cuenta está desactivada. Contacta con el administrador.');
-          return;
-        }
-        enterApp(fbUser, ud);
-      } catch (e) {
-        const isOffline = e.code === 'unavailable' || (e.message && e.message.toLowerCase().includes('offline'));
-        if (isOffline && attempt <= 4) {
-          showLoginScreen('Conectando... (intento ' + attempt + '/4)');
-          setTimeout(() => loadUserProfile(fbUser, attempt + 1), attempt * 2000);
-          return;
-        }
-        // Último recurso: si hay caché aunque sea, úsala
-        const cached = localStorage.getItem(USER_CACHE_KEY + fbUser.uid);
-        if (cached) {
-          try { enterApp(fbUser, JSON.parse(cached)); return; } catch {}
-        }
-        const msg = e.code === 'permission-denied'
-          ? 'Sin permisos en Firestore. Revisa las Reglas en Firebase Console.'
-          : 'Error al cargar perfil: ' + e.message;
-        try { await signOut(auth); } catch {}
-        currentUser = null;
-        showLoginScreen(msg);
-      }
-    }
 
     onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) {
@@ -1963,18 +1815,65 @@ async function initFirebase() {
         showLoginScreen();
         return;
       }
-      loadUserProfile(fbUser, 1);
+      await loadUserProfile(fbUser, db, { getDoc, getDocs, setDoc, doc, collection, signOut });
     });
 
     setSyncStatus('cloud');
   } catch (e) {
-    const isApiKey = e.message && (e.message.includes('api-key-not-valid') || e.message.includes('API key'));
-    const msg = isApiKey
-      ? '⚠️ API key inválida. Ve a Google Cloud Console → Credentials → tu API key → elimina las restricciones de dominio, o añade indi40.github.io. Luego pulsa "Resetear config" y vuelve a configurar.'
-      : 'Error al conectar Firebase: ' + e.message;
-    showFirebaseError(msg);
+    showFirebaseError('Error al inicializar Firebase: ' + e.message);
+    showLoginScreen('Error al inicializar Firebase: ' + e.message);
+  }
+}
+
+async function loadUserProfile(fbUser, db, fns) {
+  const { getDoc, setDoc, doc, signOut } = fns;
+  const cacheKey = LS_UPROF + fbUser.uid;
+
+  // Intentar leer de Firestore con fallback a caché local
+  try {
+    const snap = await getDoc(doc(db, 'usuarios', fbUser.uid));
+    if (!snap.exists()) {
+      // UID conocido del admin → crear perfil automáticamente
+      if (fbUser.uid === 'esuyW8Nzf1BreozklTB3rnhaLl4yp2') {
+        const adminData = { nombre: 'David', rol: 'admin', email: fbUser.email || '', activo: true };
+        await setDoc(doc(db, 'usuarios', fbUser.uid), adminData);
+        _enterApp(fbUser.uid, adminData, cacheKey, db);
+      } else {
+        await signOut(firebaseAuth);
+        showLoginScreen('Tu cuenta no está autorizada. Contacta con el administrador.');
+      }
+      return;
+    }
+    const ud = snap.data();
+    if (ud.activo === false) {
+      await signOut(firebaseAuth);
+      showLoginScreen('Tu cuenta está desactivada.');
+      return;
+    }
+    _enterApp(fbUser.uid, ud, cacheKey, db);
+  } catch (e) {
+    // Firestore no disponible — usar caché
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        _enterApp(fbUser.uid, JSON.parse(cached), cacheKey, db);
+        return;
+      } catch {}
+    }
+    const msg = e.code === 'permission-denied'
+      ? 'Sin permisos en Firestore. Revisa las reglas en Firebase Console.'
+      : 'Error al cargar perfil: ' + e.message;
+    try { await signOut(firebaseAuth); } catch {}
     showLoginScreen(msg);
   }
+}
+
+function _enterApp(uid, ud, cacheKey, db) {
+  localStorage.setItem(cacheKey, JSON.stringify(ud));
+  currentUser = { uid, ...ud };
+  hideLoginScreen();
+  applyRoleUI();
+  startFirestoreListener(db);
 }
 
 function startFirestoreListener(db) {
@@ -2030,6 +1929,7 @@ async function doLogin() {
   const errEl = document.getElementById('login-error');
   const btn   = document.getElementById('login-btn');
 
+  errEl.classList.remove('visible');
   if (!email || !pass) {
     errEl.textContent = 'Introduce email y contraseña.';
     errEl.classList.add('visible');
@@ -2038,29 +1938,19 @@ async function doLogin() {
 
   btn.disabled = true;
   btn.textContent = 'Entrando...';
-  errEl.classList.remove('visible');
-
-  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
-  if (!cfg || !cfg.apiKey) {
-    errEl.textContent = 'Primero configura Firebase (botón ⚙ Config abajo).';
-    errEl.classList.add('visible');
-    btn.disabled = false;
-    btn.textContent = 'Iniciar sesión';
-    return;
-  }
 
   try {
     await firebaseMod.signInWithEmailAndPassword(firebaseAuth, email, pass);
-    // onAuthStateChanged will handle the rest
+    // onAuthStateChanged gestiona el resto
   } catch (e) {
     const msgs = {
-      'auth/user-not-found':      'Usuario no encontrado.',
-      'auth/wrong-password':      'Contraseña incorrecta.',
-      'auth/invalid-email':       'Email no válido.',
-      'auth/too-many-requests':   'Demasiados intentos. Espera unos minutos.',
-      'auth/invalid-credential':  'Email o contraseña incorrectos.',
-      'auth/api-key-not-valid':   '⚠️ API key inválida. Ve a Google Cloud Console → Credentials y elimina las restricciones de dominio del API key, o añade https://indi40.github.io/*',
-      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': '⚠️ API key inválida. Revisa las restricciones en Google Cloud Console → Credentials.',
+      'auth/user-not-found':     'Usuario no encontrado.',
+      'auth/wrong-password':     'Contraseña incorrecta.',
+      'auth/invalid-credential': 'Email o contraseña incorrectos.',
+      'auth/invalid-email':      'Email no válido.',
+      'auth/too-many-requests':  'Demasiados intentos. Espera unos minutos.',
+      'auth/api-key-not-valid':  '⚠️ API key con restricciones. En Google Cloud Console → Credentials → tu API key → Application restrictions → None.',
+      'auth/network-request-failed': 'Sin conexión. Comprueba tu red.',
     };
     errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
     errEl.classList.add('visible');
@@ -2078,8 +1968,7 @@ async function doLogout() {
   currentUser = null;
   allData = [];
   filteredData = [];
-  const { signOut } = firebaseMod;
-  await signOut(firebaseAuth);
+  try { await firebaseMod.signOut(firebaseAuth); } catch {}
   // onAuthStateChanged → showLoginScreen
 }
 
@@ -2201,21 +2090,16 @@ async function createUser() {
   btn.disabled = true; btn.textContent = 'Creando...';
 
   try {
-    const cfg = JSON.parse(localStorage.getItem(LS_CFG));
-    // Create auth user via secondary app (no cierra sesión del admin)
-    const { initializeApp: _init, getApps } = firebaseMod;
-    const { getAuth: _getAuth, createUserWithEmailAndPassword: _create } = firebaseMod;
-    const secondaryName = 'secondary_' + Date.now();
-    const secondaryApp  = _init(cfg, secondaryName);
-    const secondaryAuth = _getAuth(secondaryApp);
-    const cred = await _create(secondaryAuth, email, pass);
-    const newUid = cred.user.uid;
-    // v9 modular: signOut(authInstance)
-    const { signOut: _signOut } = firebaseMod;
-    try { await _signOut(secondaryAuth); } catch {}
-    try { await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js').then(m => m.deleteApp && m.deleteApp(secondaryApp)); } catch {}
+    // Crear usuario Auth en app secundaria (sin cerrar sesión del admin)
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+    const { getAuth, createUserWithEmailAndPassword, signOut: _signOut } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js');
+    const secApp  = initializeApp(FIREBASE_CFG, 'secondary_' + Date.now());
+    const secAuth = getAuth(secApp);
+    const cred    = await createUserWithEmailAndPassword(secAuth, email, pass);
+    const newUid  = cred.user.uid;
+    try { await _signOut(secAuth); } catch {}
 
-    // Save user profile in Firestore
+    // Guardar perfil en Firestore
     const { doc, setDoc } = firebaseMod;
     await setDoc(doc(firebaseDb.db, 'usuarios', newUid), {
       nombre, email, rol, activo: true, creadoEn: new Date().toISOString()
@@ -2893,40 +2777,17 @@ async function addNota() {
 // FIREBASE CONFIG MODAL
 // ══════════════════════════════════════
 function openSetupModal() {
-  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || '{}');
-  ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => {
-    const el = document.getElementById('cfg-' + k);
-    if (el) el.value = cfg[k] || '';
-  });
   const ckEl = document.getElementById('cfg-claude-key');
   if (ckEl) ckEl.value = localStorage.getItem('ningenia_claude_key') || '';
   const epEl = document.getElementById('cfg-email-pass');
   if (epEl) epEl.value = localStorage.getItem('ningenia_email_pass') || '';
-  // Show migrate banner if there's local data
-  const localData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
-  const banner = document.getElementById('migrate-banner');
-  if (banner) {
-    if (localData.length > 0) {
-      document.getElementById('migrate-count').textContent = localData.length;
-      banner.style.display = 'block';
-    } else {
-      banner.style.display = 'none';
-    }
-  }
   const sm = document.getElementById('setup-modal');
-  if (sm) {
-    sm.classList.add('open');
-    sm.style.zIndex = '9999';
-    sm.style.display = 'flex';
-  }
+  if (sm) { sm.classList.add('open'); sm.style.cssText = 'display:flex!important;z-index:9999!important;'; }
 }
 
 async function syncLocalToFirebase() {
   const localData = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
   if (!localData.length) { toast('No hay datos locales para subir', 'info'); return; }
-
-  const cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
-  if (!cfg || !cfg.apiKey) { toast('Configura Firebase primero', 'error'); return; }
 
   const btn = document.querySelector('#migrate-banner button');
   if (btn) { btn.disabled = true; btn.textContent = 'Subiendo...'; }
@@ -2934,7 +2795,7 @@ async function syncLocalToFirebase() {
   try {
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
     const { getFirestore, collection, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
-    const app = getApps().find(a => a.name === '[DEFAULT]') || initializeApp(cfg);
+    const app = getApps().find(a => a.name === '[DEFAULT]') || initializeApp(FIREBASE_CFG);
     const db = getFirestore(app);
     let done = 0;
     for (const opp of localData) {
@@ -2956,21 +2817,14 @@ async function syncLocalToFirebase() {
 }
 
 function saveFirebaseConfig() {
-  const cfg = {};
-  ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => {
-    cfg[k] = document.getElementById('cfg-' + k).value.trim();
-  });
-  if (!cfg.apiKey || !cfg.projectId) { toast('API Key y Project ID son obligatorios', 'error'); return; }
-  localStorage.setItem(LS_CFG, JSON.stringify(cfg));
   const ck = document.getElementById('cfg-claude-key')?.value.trim();
   if (ck) localStorage.setItem('ningenia_claude_key', ck);
+  else localStorage.removeItem('ningenia_claude_key');
   const ep = document.getElementById('cfg-email-pass')?.value.trim();
   if (ep) localStorage.setItem('ningenia_email_pass', ep);
+  else localStorage.removeItem('ningenia_email_pass');
   closeModal('setup-modal');
-  if (unsubscribe) unsubscribe();
-  firebaseDb = null;
-  toast('Configuración guardada. Reconectando...', 'info');
-  setTimeout(() => initFirebase(), 500);
+  toast('Configuración guardada', 'success');
 }
 
 function useLocalMode() {
