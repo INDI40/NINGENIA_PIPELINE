@@ -640,6 +640,54 @@ body {
 #opp-modal.view-mode #btn-ai-analyze { display: none !important; }
 #opp-modal.view-mode #ai-panel { display: none !important; }
 
+/* ── MENÚ HAMBURGUESA (móvil) ── */
+#btn-hamburger {
+  display: none;
+  font-size: 20px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  line-height: 1;
+}
+#mobile-menu {
+  display: none;
+  position: fixed;
+  top: 50px; right: 0;
+  width: 200px;
+  background: var(--blue-dark);
+  border-radius: 0 0 0 var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 500;
+  flex-direction: column;
+  padding: 8px 0;
+}
+#mobile-menu.open { display: flex; }
+#mobile-menu button {
+  background: none;
+  border: none;
+  color: white;
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+}
+#mobile-menu button:hover { background: rgba(255,255,255,0.1); }
+#mobile-menu .menu-sep { height: 1px; background: rgba(255,255,255,0.15); margin: 4px 0; }
+#mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 499;
+}
+#mobile-menu-overlay.open { display: block; }
+@media (max-width: 768px) {
+  #btn-hamburger { display: flex; align-items: center; justify-content: center; }
+}
+
 /* ── LOGIN SCREEN ── */
 #login-screen {
   display: none;
@@ -1023,9 +1071,14 @@ body {
 @media (max-width: 768px) {
   /* Header */
   #header { padding: 0 12px; height: 50px; }
-  #header .brand span:last-child { font-size: 14px; }
+  #header .brand span:last-child { font-size: 13px; }
   #sync-status { display: none; }
+  #email-sync-indicator { display: none !important; }
   .btn-icon { padding: 5px 8px; font-size: 12px; }
+  /* Ocultar botones de nav en móvil — se muestran en menú hamburguesa */
+  .header-actions .btn-icon:not(#btn-hamburger) { display: none !important; }
+  #header-user .user-name { max-width: 70px; font-size: 12px; }
+  #header-user .user-rol  { display: none; }
 
   /* Tabs */
   #tabs { padding: 0 8px; overflow-x: auto; gap: 0; }
@@ -1209,7 +1262,21 @@ body {
     <button class="btn-icon" id="btn-nav-usuarios"  onclick="openUsersModal()" style="display:none;">👥 Usuarios</button>
     <button class="btn-icon" id="btn-nav-config"    onclick="openSetupModal()">⚙ Config</button>
     <button class="btn-icon" id="btn-nav-logout"    onclick="doLogout()" style="background:rgba(231,76,60,0.25);display:none;">⏻ Salir</button>
+    <!-- Botón hamburguesa — solo visible en móvil -->
+    <button id="btn-hamburger" onclick="toggleMobileMenu()" aria-label="Menú">☰</button>
   </div>
+</div>
+
+<!-- MENÚ MÓVIL -->
+<div id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+<div id="mobile-menu">
+  <button onclick="closeMobileMenu();location.href='agenda.html'">📅 Agenda</button>
+  <button onclick="closeMobileMenu();location.href='informe_pipeline.html'">📋 Informes</button>
+  <button id="mob-btn-importar" onclick="closeMobileMenu();location.href='importar_prospectos.html'" style="display:none;">📥 Importar</button>
+  <button id="mob-btn-usuarios" onclick="closeMobileMenu();openUsersModal()" style="display:none;">👥 Usuarios</button>
+  <div class="menu-sep"></div>
+  <button onclick="closeMobileMenu();openSetupModal()">⚙ Config</button>
+  <button id="mob-btn-logout" onclick="closeMobileMenu();doLogout()" style="display:none;color:#e74c3c;">⏻ Cerrar sesión</button>
 </div>
 <!-- NEGOCIO SELECTOR -->
 <div id="negocio-bar" style="background:#1a3f60;padding:6px 20px;display:flex;align-items:center;gap:8px;overflow-x:auto;">
@@ -2009,24 +2076,43 @@ function applyRoleUI() {
   if (!currentUser) return;
   const isAdmin = currentUser.rol === 'admin';
 
-  // Header user info
+  // Header: info usuario
   const hUser = document.getElementById('header-user');
-  hUser.style.display = 'flex';
+  if (hUser) hUser.style.display = 'flex';
   document.getElementById('header-avatar').textContent = currentUser.nombre.substring(0,2).toUpperCase();
   document.getElementById('header-name').textContent   = currentUser.nombre;
   document.getElementById('header-rol').textContent    = isAdmin ? 'Administrador' : 'Comercial';
-  // Logout button oculto (autenticación desactivada)
-  document.getElementById('btn-nav-logout').style.display  = '';
 
-  // Admin-only buttons
+  // Botones desktop
+  document.getElementById('btn-nav-logout').style.display   = '';
   document.getElementById('btn-nav-usuarios').style.display = isAdmin ? '' : 'none';
   document.getElementById('btn-nav-config').style.display   = isAdmin ? '' : 'none';
   document.getElementById('btn-nav-importar').style.display = isAdmin ? '' : 'none';
   document.getElementById('btn-bulk').style.display         = isAdmin ? '' : 'none';
 
-  // Comercial filter hidden for comerciales (they only see their own)
+  // Menú móvil — sincronizar visibilidad por rol
+  const mImp  = document.getElementById('mob-btn-importar');
+  const mUsr  = document.getElementById('mob-btn-usuarios');
+  const mOut  = document.getElementById('mob-btn-logout');
+  if (mImp) mImp.style.display = isAdmin ? '' : 'none';
+  if (mUsr) mUsr.style.display = isAdmin ? '' : 'none';
+  if (mOut) mOut.style.display = '';
+
+  // Filtro comercial
   const fcEl = document.getElementById('filter-comercial');
   if (fcEl) fcEl.closest('.toolbar-filters') && (fcEl.style.display = isAdmin ? '' : 'none');
+}
+
+// ── MENÚ HAMBURGUESA ─────────────────────────────
+function toggleMobileMenu() {
+  const menu    = document.getElementById('mobile-menu');
+  const overlay = document.getElementById('mobile-menu-overlay');
+  const open    = menu.classList.toggle('open');
+  overlay.classList.toggle('open', open);
+}
+function closeMobileMenu() {
+  document.getElementById('mobile-menu').classList.remove('open');
+  document.getElementById('mobile-menu-overlay').classList.remove('open');
 }
 
 // ── GESTIÓN DE USUARIOS (admin) ──────────────────
