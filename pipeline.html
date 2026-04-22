@@ -1634,11 +1634,70 @@ body {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('opp-modal')">Cerrar</button>
+      <button class="btn" id="btn-email" style="background:linear-gradient(135deg,#1a5276,#2980b9);color:white;display:none;" onclick="openEmailComposer()">✉ Email</button>
       <button class="btn" id="btn-record-call" style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:white;display:none;" onclick="openRecordingModal()">🎙 Grabar llamada</button>
       <button class="btn btn-danger" id="btn-discard" style="display:none;" onclick="discardOportunidad()">Descartar</button>
       <button class="btn btn-success" id="btn-cerrar" style="display:none;" onclick="cerrarOportunidad()">Marcar como Cerrado</button>
       <button class="btn btn-primary" id="btn-view-edit" style="display:none;" onclick="switchToEditMode()">✏ Editar ficha</button>
       <button class="btn btn-primary" id="btn-save" onclick="saveOportunidad()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL COMPOSER MODAL -->
+<div class="modal-overlay" id="email-composer-modal">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header">
+      <h2>✉ Enviar Email</h2>
+      <button class="modal-close" onclick="closeModal('email-composer-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>De</label>
+        <input type="text" id="em-from" readonly style="background:#f0f4f8;color:#7f8c8d;cursor:default;">
+      </div>
+      <div class="form-group">
+        <label>Para *</label>
+        <input type="email" id="em-to" placeholder="email@empresa.com">
+      </div>
+      <div class="form-group">
+        <label>Asunto *</label>
+        <input type="text" id="em-subject" placeholder="Asunto del email">
+      </div>
+      <div class="form-group full">
+        <label>Mensaje</label>
+        <textarea id="em-body" style="min-height:180px;resize:vertical;font-family:inherit;font-size:13px;" placeholder="Escribe tu mensaje aquí..."></textarea>
+      </div>
+      <div id="em-error" style="display:none;color:#e74c3c;font-size:12px;padding:8px;background:#fdedec;border-radius:6px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('email-composer-modal')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-em-send" onclick="sendEmail()">✉ Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- REASIGNAR MODAL -->
+<div class="modal-overlay" id="reasign-modal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h2>🔄 Reasignar ficha</h2>
+      <button class="modal-close" onclick="closeModal('reasign-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#555;margin-bottom:16px;">Cambia la empresa y/o el negocio. La ficha se reactivará como <strong>Prospecto</strong> conservando todo el historial, notas y análisis IA.</p>
+      <div class="form-group">
+        <label>Empresa *</label>
+        <input type="text" id="ra-empresa" placeholder="Nombre de la empresa">
+      </div>
+      <div class="form-group">
+        <label>Negocio destino</label>
+        <select id="ra-negocio"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('reasign-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmReasign()">🔄 Reasignar y reactivar</button>
     </div>
   </div>
 </div>
@@ -2778,6 +2837,7 @@ function renderHistorial() {
         <div class="list-detail">${esc(o.sector||'')} · ${esc(o.notas||'').substring(0,60)}</div>
         <div class="list-ticket" style="color:#95a5a6">€${fmt(o.ticketEstimado)}</div>
         <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="reactivate('${o.id}')">Reactivar</button>
+        <button class="btn" style="padding:4px 10px;font-size:11px;background:#1a5276;color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;" onclick="openReasignModal('${o.id}')">🔄 Reasignar</button>
       </div>`).join('');
 }
 
@@ -2850,6 +2910,7 @@ function openViewModal(id) {
   document.getElementById('btn-save').style.display = 'none';
   document.getElementById('btn-view-edit').style.display = 'inline-flex';
   document.getElementById('btn-record-call').style.display = 'inline-flex';
+  document.getElementById('btn-email').style.display = opp.email ? 'inline-flex' : 'none';
   document.getElementById('add-nota-row').style.display = 'none';
 
   // Show historial
@@ -2890,6 +2951,7 @@ function openEditModal(id, forceCierre = false) {
   document.getElementById('btn-discard').style.display = opp.etapa !== 'descartado' ? 'inline-flex' : 'none';
   document.getElementById('btn-cerrar').style.display = opp.etapa !== 'cerrado' ? 'inline-flex' : 'none';
   document.getElementById('btn-record-call').style.display = 'inline-flex';
+  document.getElementById('btn-email').style.display = opp.email ? 'inline-flex' : 'none';
   document.getElementById('btn-view-edit').style.display = 'none';
   // Historial
   if (opp.historial && opp.historial.length > 0) {
@@ -3834,6 +3896,123 @@ let recSeconds        = 0;
 let recCurrentOppId   = null;
 let recTranscription  = '';
 let recSummary        = '';
+
+// ══════════════════════════════════════
+// EMAIL DESDE FICHA
+// ══════════════════════════════════════
+const EMAIL_FROM_MAP = {
+  ningenia:  'david.garrido@indi40.com',
+  loncheria: 'comercial@laloncheriadeljamon.com',
+};
+
+let emailOppId = null;
+
+function openEmailComposer(oppId) {
+  const opp = allData.find(o => o.id === (oppId || editingId));
+  if (!opp) return;
+  emailOppId = opp.id;
+  document.getElementById('em-from').value    = EMAIL_FROM_MAP[opp.negocio] || EMAIL_FROM_MAP['ningenia'];
+  document.getElementById('em-to').value      = opp.email || '';
+  document.getElementById('em-subject').value = '';
+  document.getElementById('em-body').value    = '';
+  document.getElementById('em-error').style.display = 'none';
+  openModal('email-composer-modal');
+}
+
+async function sendEmail() {
+  const to      = document.getElementById('em-to').value.trim();
+  const subject = document.getElementById('em-subject').value.trim();
+  const body    = document.getElementById('em-body').value.trim();
+  const errEl   = document.getElementById('em-error');
+  const btn     = document.getElementById('btn-em-send');
+
+  errEl.style.display = 'none';
+  if (!to)      { errEl.textContent = 'El destinatario es obligatorio.'; errEl.style.display = 'block'; return; }
+  if (!subject) { errEl.textContent = 'El asunto es obligatorio.'; errEl.style.display = 'block'; return; }
+
+  const opp = allData.find(o => o.id === emailOppId);
+  if (!opp) return;
+
+  btn.disabled = true; btn.textContent = '⏳ Enviando...';
+  try {
+    const resp = await fetch('http://localhost:8765/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ negocio: opp.negocio, to, subject, body })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+
+    // Registrar en historial y guardar
+    const updated = { ...opp, historial: [...(opp.historial || [])] };
+    updated.historial.unshift({
+      fecha:     today(),
+      tipo:      'email',
+      nota:      `✉ Email enviado a ${to} — "${subject}"`,
+      comercial: currentUser?.nombre || '',
+    });
+    await saveDoc(updated);
+
+    closeModal('email-composer-modal');
+    toast('✅ Email enviado y registrado en el historial', 'success');
+  } catch(e) {
+    errEl.textContent = e.message.includes('Failed to fetch')
+      ? '⚠️ No se conecta al servidor local. ¿Está corriendo iniciar_servidor.bat?'
+      : '❌ ' + e.message;
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = '✉ Enviar';
+}
+
+// ══════════════════════════════════════
+// REASIGNAR FICHA DESCARTADA
+// ══════════════════════════════════════
+let reasignId = null;
+
+function openReasignModal(id) {
+  const opp = allData.find(o => o.id === id);
+  if (!opp) return;
+  reasignId = id;
+  document.getElementById('ra-empresa').value = opp.empresa;
+  const sel = document.getElementById('ra-negocio');
+  sel.innerHTML = Object.values(NEGOCIOS)
+    .map(n => `<option value="${n.id}"${n.id === opp.negocio ? ' selected' : ''}>${esc(n.nombre)}</option>`)
+    .join('');
+  openModal('reasign-modal');
+}
+
+async function confirmReasign() {
+  const empresa = document.getElementById('ra-empresa').value.trim();
+  const negocio = document.getElementById('ra-negocio').value;
+  if (!empresa) { toast('Escribe el nombre de la empresa', 'error'); return; }
+
+  const opp = allData.find(o => o.id === reasignId);
+  if (!opp) return;
+
+  const negNombre = NEGOCIOS[negocio]?.nombre || negocio;
+  const updated = {
+    ...opp,
+    empresa,
+    negocio,
+    etapa: 'prospecto',
+    historial: [
+      {
+        fecha:     today(),
+        tipo:      'cambio_etapa',
+        etapaAnterior: 'descartado',
+        etapaNueva:    'prospecto',
+        nota:      `Reasignada a "${empresa}" en ${negNombre}`,
+        comercial: currentUser?.nombre || '',
+      },
+      ...(opp.historial || []),
+    ],
+  };
+
+  await saveDoc(updated);
+  closeModal('reasign-modal');
+  reasignId = null;
+  toast(`✅ Ficha reasignada a "${empresa}" (${negNombre}) como Prospecto`, 'success');
+}
 
 function openRecordingModal() {
   if (!editingId) return;
