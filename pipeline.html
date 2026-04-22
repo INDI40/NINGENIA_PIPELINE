@@ -3911,7 +3911,9 @@ function openEmailComposer(oppId) {
   const opp = allData.find(o => o.id === (oppId || editingId));
   if (!opp) return;
   emailOppId = opp.id;
-  document.getElementById('em-from').value    = EMAIL_FROM_MAP[opp.negocio] || EMAIL_FROM_MAP['ningenia'];
+  const negocio = opp.negocio || currentNegocio || 'ningenia';
+  document.getElementById('em-from').value    = EMAIL_FROM_MAP[negocio] || EMAIL_FROM_MAP['ningenia'];
+  document.getElementById('em-from').dataset.negocio = negocio;
   document.getElementById('em-to').value      = opp.email || '';
   document.getElementById('em-subject').value = '';
   document.getElementById('em-body').value    = '';
@@ -3935,10 +3937,12 @@ async function sendEmail() {
 
   btn.disabled = true; btn.textContent = '⏳ Enviando...';
   try {
+    const negocio = document.getElementById('em-from').dataset.negocio
+                  || opp.negocio || currentNegocio || 'ningenia';
     const resp = await fetch('http://localhost:8765/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ negocio: opp.negocio, to, subject, body })
+      body: JSON.stringify({ negocio, to, subject, body })
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
