@@ -1,0 +1,11 @@
+# Contraseñas y datos sensibles — NUNCA a GitHub
+passwords.py
+*.env
+.env*
+
+# Datos locales del servidor
+processed_emails.json
+
+# Python
+__pycache__/
+*.pyc

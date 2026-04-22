@@ -28,20 +28,28 @@ EMAIL_USER = 'david.garrido@indi40.com'
 PORT       = 8765
 DATA_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'processed_emails.json')
 
+# ── CONTRASEÑAS (fichero local, no en GitHub) ──────────
+try:
+    from passwords import IMAP_PASSWORD, SMTP_PASSWORDS
+except ImportError:
+    print('⚠️  No se encontró passwords.py. Crea el fichero con tus contraseñas.')
+    IMAP_PASSWORD  = ''
+    SMTP_PASSWORDS = {'ningenia': '', 'loncheria': ''}
+
 # ── CONFIGURACIÓN SMTP (envío) ─────────────────────────
 SMTP_CONFIG = {
     'ningenia': {
         'host':     '217.116.0.228',
         'port':     25,
         'user':     'david.garrido@indi40.com',
-        'password': 'Empresa2020@',
+        'password': SMTP_PASSWORDS.get('ningenia', ''),
         'use_ssl':  False,
     },
     'loncheria': {
         'host':     'authsmtp.securemail.pro',
         'port':     465,
         'user':     'comercial@laloncheriadeljamon.com',
-        'password': 'Laloncheria_comercial25',
+        'password': SMTP_PASSWORDS.get('loncheria', ''),
         'use_ssl':  True,
     },
 }
